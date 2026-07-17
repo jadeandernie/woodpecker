@@ -47,3 +47,18 @@ func TestGetPipelineStatusContext(t *testing.T) {
 	server.Config.Server.StatusContextFormat = "{{ .context }}:{{ .owner }}/{{ .repo }}:{{ .event }}:{{ .workflow }}"
 	assert.EqualValues(t, "ci:user1/repo1:push:lint", GetPipelineStatusContext(repo, pipeline, workflow))
 }
+
+func TestGetPipelineStatusURLForSyntheticWorkflow(t *testing.T) {
+	origHost := server.Config.Server.Host
+	defer func() {
+		server.Config.Server.Host = origHost
+	}()
+
+	server.Config.Server.Host = "https://ci.example.com"
+	repo := &model.Repo{ID: 1}
+	pipeline := &model.Pipeline{Number: 2}
+
+	assert.EqualValues(t, "https://ci.example.com/repos/1/pipeline/2", GetPipelineStatusURL(repo, pipeline, nil))
+	assert.EqualValues(t, "https://ci.example.com/repos/1/pipeline/2", GetPipelineStatusURL(repo, pipeline, &model.Workflow{}))
+	assert.EqualValues(t, "https://ci.example.com/repos/1/pipeline/2/3", GetPipelineStatusURL(repo, pipeline, &model.Workflow{PID: 3}))
+}

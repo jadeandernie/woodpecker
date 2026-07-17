@@ -81,7 +81,7 @@ func GetPipelineStatusDescription(status model.StatusValue) string {
 }
 
 func GetPipelineStatusURL(repo *model.Repo, pipeline *model.Pipeline, workflow *model.Workflow) string {
-	if workflow == nil {
+	if workflow == nil || workflow.PID == 0 {
 		return fmt.Sprintf("%s/repos/%d/pipeline/%d", server.Config.Server.Host, repo.ID, pipeline.Number)
 	}
 

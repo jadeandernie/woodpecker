@@ -592,7 +592,7 @@ func (s *RPC) completeChildrenIfParentCompleted(completedWorkflow *model.Workflo
 	}
 }
 
-func (s *RPC) updateForgeStatus(ctx context.Context, repo *model.Repo, pipeline *model.Pipeline, workflow *model.Workflow) {
+func (s *RPC) updateForgeStatus(ctx context.Context, repo *model.Repo, currentPipeline *model.Pipeline, workflow *model.Workflow) {
 	user, err := s.store.GetUser(repo.UserID)
 	if err != nil {
 		log.Error().Err(err).Msgf("cannot get user with id '%d'", repo.UserID)
@@ -609,9 +609,19 @@ func (s *RPC) updateForgeStatus(ctx context.Context, repo *model.Repo, pipeline 
 
 	// only do status updates for parent steps
 	if workflow != nil {
-		err = _forge.Status(ctx, user, repo, pipeline, workflow)
-		if err != nil {
-			log.Error().Err(err).Msgf("error setting commit status for %s/%d", repo.FullName, pipeline.Number)
+		if len(currentPipeline.Workflows) == 0 {
+			currentPipeline.Workflows, err = s.store.WorkflowGetTree(currentPipeline)
+			if err != nil {
+				log.Error().Err(err).Msg("cannot build tree from step list")
+				return
+			}
+		}
+
+		for _, statusWorkflow := range pipeline.ForgeStatusWorkflows(currentPipeline.Workflows, workflow) {
+			err = _forge.Status(ctx, user, repo, currentPipeline, statusWorkflow)
+			if err != nil {
+				log.Error().Err(err).Msgf("error setting commit status for %s/%d", repo.FullName, currentPipeline.Number)
+			}
 		}
 	}
 }

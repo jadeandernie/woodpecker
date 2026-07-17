@@ -24,7 +24,7 @@ import (
 )
 
 func updatePipelineStatus(ctx context.Context, forge forge.Forge, pipeline *model.Pipeline, repo *model.Repo, user *model.User) {
-	for _, workflow := range pipeline.Workflows {
+	for _, workflow := range ForgeStatusWorkflows(pipeline.Workflows, nil) {
 		err := forge.Status(ctx, user, repo, pipeline, workflow)
 		if err != nil {
 			log.Error().Err(err).Msgf("error setting commit status for %s/%d", repo.FullName, pipeline.Number)
