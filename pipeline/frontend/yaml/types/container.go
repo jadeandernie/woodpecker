@@ -35,6 +35,7 @@ type Container struct {
 	DependsOn constraint.DependsOn `yaml:"depends_on,omitempty"`
 	When      constraint.When      `yaml:"when,omitempty"`
 	Failure   string               `yaml:"failure,omitempty"`
+	Timeout   base.Duration        `yaml:"timeout,omitempty"`
 	Detached  bool                 `yaml:"detach,omitempty"`
 	// state
 	Volumes Volumes `yaml:"volumes,omitempty"`

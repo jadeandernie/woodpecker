@@ -198,6 +198,22 @@ Some of the steps may be allowed to fail without causing the whole workflow and 
 
 If you would like to cancel the full pipeline once the step fails, you can set `failure: cancel`. For the default behaviour, use `failure: fail`.
 
+### `timeout`
+
+Set `timeout` to limit how long a step may run before Woodpecker stops it and marks it as failed.
+The value uses Go duration syntax, such as `30s`, `5m`, or `1h`.
+
+```diff
+ steps:
+   - name: scan
+     image: alpine
++    timeout: 5m
+     commands:
+       - ./scan
+```
+
+Use the existing [`failure`](#failure) setting if a timed-out step should be ignored or cancel the whole pipeline.
+
 ### `when` - Conditional Execution
 
 Woodpecker supports defining a list of conditions for a step by using a `when` block. If at least one of the conditions in the `when` block evaluate to true the step is executed, otherwise it is skipped. A condition is evaluated to true if _all_ sub-conditions are true.

@@ -17,6 +17,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 var (
@@ -58,4 +59,15 @@ func IsStepFailure(err error) bool {
 	var exitErr *ExitError
 	var oomErr *OomError
 	return errors.As(err, &exitErr) || errors.As(err, &oomErr)
+}
+
+// A TimeoutError reports a step that exceeded its configured timeout.
+type TimeoutError struct {
+	UUID    string
+	Timeout time.Duration
+}
+
+// Error returns the error message in string format.
+func (e *TimeoutError) Error() string {
+	return fmt.Sprintf("uuid=%s: step timed out after %s", e.UUID, e.Timeout)
 }

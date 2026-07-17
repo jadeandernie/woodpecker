@@ -16,6 +16,7 @@ package compiler
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -342,6 +343,23 @@ func TestCompilerCompile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCompilerCompileStepTimeout(t *testing.T) {
+	compiler := New(WithPrefix("test"))
+
+	backConf, err := compiler.Compile(&yaml_types.Workflow{
+		SkipClone: true,
+		Steps: yaml_types.ContainerList{ContainerList: []*yaml_types.Container{{
+			Name:     "slow",
+			Image:    "bash",
+			Commands: []string{"sleep 60"},
+			Timeout:  yaml_base_types.Duration(30 * time.Second),
+		}}},
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, 30*time.Second, backConf.Stages[0].Steps[0].Timeout)
 }
 
 func TestCompilerCompileWithFromSecret(t *testing.T) {

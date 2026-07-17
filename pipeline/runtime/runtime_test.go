@@ -1303,6 +1303,35 @@ func TestWorkflowCancelDuringStepSleep(t *testing.T) {
 		"never-reached must not have been traced")
 }
 
+func TestWorkflowStepTimeoutFailsStep(t *testing.T) {
+	t.Parallel()
+
+	tracer := newTestTracer(t)
+	r := New(
+		&backend_types.Config{
+			Stages: []*backend_types.Stage{
+				{Steps: []*backend_types.Step{
+					cmdStep("slow", func(s *backend_types.Step) {
+						s.Timeout = 10 * time.Millisecond
+						s.Environment[dummy.EnvKeyStepSleep] = "100ms"
+					}),
+				}},
+			},
+		},
+		dummy.New(),
+		WithTracer(tracer),
+		WithLogger(newTestLogger(t)),
+	)
+
+	err := r.Run(t.Context())
+	assert.ErrorAs(t, err, new(*pipeline_errors.TimeoutError))
+
+	lastSlowTrace := findLastTraceByName(getTracerStates(tracer), "slow")
+	require.NotNil(t, lastSlowTrace)
+	assert.False(t, errors.Is(lastSlowTrace.CurrStepState.Error, pipeline_errors.ErrCancel))
+	assert.ErrorAs(t, lastSlowTrace.CurrStepState.Error, new(*pipeline_errors.TimeoutError))
+}
+
 // TestWorkflowFailingServiceDoesNotFailWorkflow pins down the intentional design:
 // a service/detached step that fails in the background has its failure logged
 // and traced, but it must NOT propagate to the workflow error. Subsequent

@@ -374,6 +374,9 @@
         "pull": {
           "$ref": "#/definitions/step_pull"
         },
+        "timeout": {
+          "$ref": "#/definitions/step_timeout"
+        },
         "commands": {
           "$ref": "#/definitions/step_commands"
         },
@@ -437,6 +440,9 @@
         },
         "pull": {
           "$ref": "#/definitions/step_pull"
+        },
+        "timeout": {
+          "$ref": "#/definitions/step_timeout"
         },
         "directory": {
           "$ref": "#/definitions/step_directory"
@@ -671,6 +677,10 @@
     "step_pull": {
       "description": "Always pull the latest image on pipeline execution Read more: https://woodpecker-ci.org/docs/usage/workflow-syntax#image",
       "type": "boolean"
+    },
+    "step_timeout": {
+      "description": "Maximum duration a step may run before it is stopped and marked failed. Uses Go duration syntax such as `30s`, `5m`, or `1h`. Read more: https://woodpecker-ci.org/docs/usage/workflow-syntax#timeout",
+      "type": "string"
     },
     "step_commands": {
       "description": "Commands of every pipeline step are executed serially as if you would enter them into your local shell. Read more: https://woodpecker-ci.org/docs/usage/workflow-syntax#commands",

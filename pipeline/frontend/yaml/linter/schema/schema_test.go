@@ -179,6 +179,19 @@ func TestSchema(t *testing.T) {
 	}
 }
 
+func TestSchemaAllowsStepTimeout(t *testing.T) {
+	t.Parallel()
+
+	_, err := schema.LintString(`steps:
+  slow:
+    image: alpine
+    commands:
+      - sleep 60
+    timeout: 30s
+`)
+	assert.NoError(t, err)
+}
+
 func TestSchemaFiltersRedundantCompositionErrors(t *testing.T) {
 	t.Parallel()
 

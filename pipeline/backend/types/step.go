@@ -14,6 +14,8 @@
 
 package types
 
+import "time"
+
 // Step defines a container process.
 type Step struct {
 	Name           string            `json:"name"`
@@ -41,6 +43,7 @@ type Step struct {
 	OnFailure      bool              `json:"on_failure,omitempty"`
 	OnSuccess      bool              `json:"on_success,omitempty"`
 	Failure        string            `json:"failure,omitempty"`
+	Timeout        time.Duration     `json:"timeout,omitempty"`
 	AuthConfig     Auth              `json:"auth_config"`
 	NetworkMode    string            `json:"network_mode,omitempty"`
 	Ports          []Port            `json:"ports,omitempty"`
