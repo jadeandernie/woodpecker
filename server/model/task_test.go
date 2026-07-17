@@ -123,3 +123,15 @@ func TestTask_ApplyLabelsFromOrg(t *testing.T) {
 		}, task.Labels)
 	})
 }
+
+func TestTaskShouldRunOnKilledDependencyWhenFailureIsAllowed(t *testing.T) {
+	task := &Task{
+		Dependencies: []string{"build"},
+		DepStatus: map[string]StatusValue{
+			"build": StatusKilled,
+		},
+		RunOn: []string{string(StatusFailure)},
+	}
+
+	assert.True(t, task.ShouldRun())
+}

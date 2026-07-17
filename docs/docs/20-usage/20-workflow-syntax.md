@@ -362,10 +362,11 @@ By default, steps only run when the workflow has succeeded up to that point,<br>
 which is equivalent to `status: [ success ]`.
 
 The `status` filter lets you override this behavior.
-The only accepted values are `success` and `failure`.
+The accepted values are `success` and `failure`.
+For dependency-gated workflows, `failure` means any non-success dependency outcome, including failed, skipped, and killed workflows.
 
 A common use case is executing a step on failure, such as sending notifications for a failed workflow/pipeline.
-To run a step regardless of outcome, list both values:
+To run cleanup or notification work regardless of whether a dependency succeeds or fails, list both values:
 
 ```diff
  steps:
@@ -374,6 +375,9 @@ To run a step regardless of outcome, list both values:
 +    when:
 +      - status: [ success, failure ]
 ```
+
+If a workflow is actively canceled or killed while a step is running, later steps in the same workflow cannot start because that workflow's execution context is already stopped.
+Put cleanup that must run after another workflow is killed into a dependent workflow and use `status: [ success, failure ]` there.
 
 The filter is aware of the other filters. If you want to run on failures if the event is `tag`, but if it's a `pull_request`, run it on both success and failure:
 

@@ -278,3 +278,12 @@ func TestMatrixSchemaWorkflowLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestWhenStatusSchemaDocumentsKilledAsFailureOutcome(t *testing.T) {
+	schemaJSON, err := os.ReadFile("schema.json")
+	require.NoError(t, err)
+
+	statusDescription := string(schemaJSON)
+	assert.Contains(t, statusDescription, "killed")
+	assert.Contains(t, strings.ToLower(statusDescription), "non-success")
+}

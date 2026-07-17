@@ -254,7 +254,7 @@
           "$ref": "#/definitions/constraint_list"
         },
         "status": {
-          "description": "Read more: https://woodpecker-ci.org/docs/usage/workflows#flow-control",
+          "description": "Read more: https://woodpecker-ci.org/docs/usage/workflows#flow-control. `failure` matches non-success dependency outcomes, including failed, skipped, and killed workflows.",
           "oneOf": [
             {
               "type": "array",
@@ -515,7 +515,7 @@
           "$ref": "#/definitions/constraint_list"
         },
         "status": {
-          "description": "Read more: https://woodpecker-ci.org/docs/usage/workflow-syntax#status",
+          "description": "Read more: https://woodpecker-ci.org/docs/usage/workflow-syntax#status. `failure` matches non-success outcomes, including failed, skipped, and killed workflows.",
           "oneOf": [
             {
               "type": "array",
