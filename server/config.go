@@ -68,19 +68,20 @@ var Config = struct {
 		AuthToken string
 	}
 	Pipeline struct {
-		AuthenticatePublicRepos             bool
-		DefaultAllowPullRequests            bool
-		DefaultCancelPreviousPipelineEvents []model.WebhookEvent
-		DefaultApprovalMode                 model.ApprovalMode
-		DefaultWorkflowLabels               map[string]string
-		DefaultClonePlugin                  string
-		TrustedClonePlugins                 []string
-		Volumes                             []string
-		Networks                            []string
-		PrivilegedPlugins                   []string
-		DefaultTimeout                      int64
-		MaxTimeout                          int64
-		Proxy                               struct {
+		AuthenticatePublicRepos                  bool
+		DefaultAllowPullRequests                 bool
+		DefaultCancelPreviousPipelineEvents      []model.WebhookEvent
+		DefaultCancelPreviousPipelineKeepRunning bool
+		DefaultApprovalMode                      model.ApprovalMode
+		DefaultWorkflowLabels                    map[string]string
+		DefaultClonePlugin                       string
+		TrustedClonePlugins                      []string
+		Volumes                                  []string
+		Networks                                 []string
+		PrivilegedPlugins                        []string
+		DefaultTimeout                           int64
+		MaxTimeout                               int64
+		Proxy                                    struct {
 			No    string
 			HTTP  string
 			HTTPS string

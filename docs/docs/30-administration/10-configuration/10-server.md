@@ -818,6 +818,15 @@ List of event names that will be canceled when a new pipeline for the same conte
 
 ---
 
+### DEFAULT_CANCEL_PREVIOUS_PIPELINE_KEEP_RUNNING
+
+- Name: `WOODPECKER_DEFAULT_CANCEL_PREVIOUS_PIPELINE_KEEP_RUNNING`
+- Default: `false`
+
+The default setting on a new repo for only canceling previous pipelines that have not started yet, so a running pipeline is left to finish.
+
+---
+
 ### DEFAULT_CLONE_PLUGIN
 
 - Name: `WOODPECKER_DEFAULT_CLONE_PLUGIN`

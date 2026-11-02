@@ -217,6 +217,7 @@ func setupEvilGlobals(ctx context.Context, c *cli.Command, s store.Store) (err e
 		events = append(events, e)
 	}
 	server.Config.Pipeline.DefaultCancelPreviousPipelineEvents = events
+	server.Config.Pipeline.DefaultCancelPreviousPipelineKeepRunning = c.Bool("default-cancel-previous-pipeline-keep-running")
 	server.Config.Pipeline.DefaultTimeout = c.Int64("default-pipeline-timeout")
 	server.Config.Pipeline.MaxTimeout = c.Int64("max-pipeline-timeout")
 

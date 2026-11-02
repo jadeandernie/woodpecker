@@ -47,38 +47,39 @@ type Repo struct {
 	UserID  int64 `json:"-"                  xorm:"INDEX 'user_id'"`
 	ForgeID int64 `json:"forge_id,omitempty" xorm:"UNIQUE(forge) UNIQUE(name) UNIQUE(full_name) forge_id"`
 	// ForgeRemoteID is the unique identifier for the repository on the forge.
-	ForgeRemoteID                ForgeRemoteID        `json:"forge_remote_id"                 xorm:"UNIQUE(forge) forge_remote_id"`
-	OrgID                        int64                `json:"org_id"                          xorm:"INDEX 'org_id'"`
-	Owner                        string               `json:"owner"                           xorm:"UNIQUE(name) 'owner'"`
-	Name                         string               `json:"name"                            xorm:"UNIQUE(name) 'name'"`
-	FullName                     string               `json:"full_name"                       xorm:"UNIQUE(full_name) 'full_name'"`
-	Avatar                       string               `json:"avatar_url,omitempty"            xorm:"varchar(500) 'avatar'"`
-	ForgeURL                     string               `json:"forge_url,omitempty"             xorm:"varchar(1000) 'forge_url'"`
-	Clone                        string               `json:"clone_url,omitempty"             xorm:"varchar(1000) 'clone'"`
-	CloneSSH                     string               `json:"clone_url_ssh"                   xorm:"varchar(1000) 'clone_ssh'"`
-	Branch                       string               `json:"default_branch,omitempty"        xorm:"varchar(500) 'branch'"`
-	PREnabled                    bool                 `json:"pr_enabled"                      xorm:"DEFAULT TRUE 'pr_enabled'"`
-	Timeout                      int64                `json:"timeout,omitempty"               xorm:"timeout"`
-	Visibility                   RepoVisibility       `json:"visibility"                      xorm:"varchar(10) 'visibility'"`
-	IsSCMPrivate                 bool                 `json:"private"                         xorm:"private"`
-	Trusted                      TrustedConfiguration `json:"trusted"                         xorm:"json 'trusted'"`
-	RequireApproval              ApprovalMode         `json:"require_approval"                xorm:"varchar(50) require_approval"`
-	ApprovalAllowedUsers         []string             `json:"approval_allowed_users"          xorm:"json approval_allowed_users"`
-	IsActive                     bool                 `json:"active"                          xorm:"active"`
-	AllowPull                    bool                 `json:"allow_pr"                        xorm:"allow_pr"`
-	AllowDeploy                  bool                 `json:"allow_deploy"                    xorm:"allow_deploy"`
-	Config                       string               `json:"config_file"                     xorm:"varchar(500) 'config_path'"`
-	WebhookSecret                string               `json:"-"                               xorm:"varchar(500) 'hash'"`
-	CancelPreviousPipelineEvents []WebhookEvent       `json:"cancel_previous_pipeline_events" xorm:"json 'cancel_previous_pipeline_events'"`
-	CancelPreviousPipelineSquash bool                 `json:"cancel_previous_pipeline_squash" xorm:"DEFAULT FALSE 'cancel_previous_pipeline_squash'"`
-	NetrcTrustedPlugins          []string             `json:"netrc_trusted"                   xorm:"json 'netrc_trusted'"`
-	ConfigExtensionEndpoint      string               `json:"config_extension_endpoint"       xorm:"varchar(500) 'config_extension_endpoint'"`
-	ConfigExtensionExclusive     bool                 `json:"config_extension_exclusive"      xorm:"DEFAULT FALSE 'config_extension_exclusive'"`
-	ConfigExtensionNetrc         bool                 `json:"config_extension_netrc"          xorm:"DEFAULT FALSE 'config_extension_netrc'"`
-	RegistryExtensionEndpoint    string               `json:"registry_extension_endpoint"     xorm:"varchar(500) 'registry_extension_endpoint'"`
-	RegistryExtensionNetrc       bool                 `json:"registry_extension_netrc"        xorm:"DEFAULT FALSE 'registry_extension_netrc'"`
-	SecretExtensionEndpoint      string               `json:"secret_extension_endpoint"       xorm:"varchar(500) 'secret_extension_endpoint'"`
-	SecretExtensionNetrc         bool                 `json:"secret_extension_netrc"          xorm:"DEFAULT FALSE 'secret_extension_netrc'"`
+	ForgeRemoteID                     ForgeRemoteID        `json:"forge_remote_id"                 xorm:"UNIQUE(forge) forge_remote_id"`
+	OrgID                             int64                `json:"org_id"                          xorm:"INDEX 'org_id'"`
+	Owner                             string               `json:"owner"                           xorm:"UNIQUE(name) 'owner'"`
+	Name                              string               `json:"name"                            xorm:"UNIQUE(name) 'name'"`
+	FullName                          string               `json:"full_name"                       xorm:"UNIQUE(full_name) 'full_name'"`
+	Avatar                            string               `json:"avatar_url,omitempty"            xorm:"varchar(500) 'avatar'"`
+	ForgeURL                          string               `json:"forge_url,omitempty"             xorm:"varchar(1000) 'forge_url'"`
+	Clone                             string               `json:"clone_url,omitempty"             xorm:"varchar(1000) 'clone'"`
+	CloneSSH                          string               `json:"clone_url_ssh"                   xorm:"varchar(1000) 'clone_ssh'"`
+	Branch                            string               `json:"default_branch,omitempty"        xorm:"varchar(500) 'branch'"`
+	PREnabled                         bool                 `json:"pr_enabled"                      xorm:"DEFAULT TRUE 'pr_enabled'"`
+	Timeout                           int64                `json:"timeout,omitempty"               xorm:"timeout"`
+	Visibility                        RepoVisibility       `json:"visibility"                      xorm:"varchar(10) 'visibility'"`
+	IsSCMPrivate                      bool                 `json:"private"                         xorm:"private"`
+	Trusted                           TrustedConfiguration `json:"trusted"                         xorm:"json 'trusted'"`
+	RequireApproval                   ApprovalMode         `json:"require_approval"                xorm:"varchar(50) require_approval"`
+	ApprovalAllowedUsers              []string             `json:"approval_allowed_users"          xorm:"json approval_allowed_users"`
+	IsActive                          bool                 `json:"active"                          xorm:"active"`
+	AllowPull                         bool                 `json:"allow_pr"                        xorm:"allow_pr"`
+	AllowDeploy                       bool                 `json:"allow_deploy"                    xorm:"allow_deploy"`
+	Config                            string               `json:"config_file"                     xorm:"varchar(500) 'config_path'"`
+	WebhookSecret                     string               `json:"-"                               xorm:"varchar(500) 'hash'"`
+	CancelPreviousPipelineEvents      []WebhookEvent       `json:"cancel_previous_pipeline_events" xorm:"json 'cancel_previous_pipeline_events'"`
+	CancelPreviousPipelineKeepRunning bool                 `json:"cancel_previous_pipeline_keep_running" xorm:"DEFAULT FALSE 'cancel_previous_pipeline_keep_running'"`
+	CancelPreviousPipelineSquash      bool                 `json:"cancel_previous_pipeline_squash" xorm:"DEFAULT FALSE 'cancel_previous_pipeline_squash'"`
+	NetrcTrustedPlugins               []string             `json:"netrc_trusted"                   xorm:"json 'netrc_trusted'"`
+	ConfigExtensionEndpoint           string               `json:"config_extension_endpoint"       xorm:"varchar(500) 'config_extension_endpoint'"`
+	ConfigExtensionExclusive          bool                 `json:"config_extension_exclusive"      xorm:"DEFAULT FALSE 'config_extension_exclusive'"`
+	ConfigExtensionNetrc              bool                 `json:"config_extension_netrc"          xorm:"DEFAULT FALSE 'config_extension_netrc'"`
+	RegistryExtensionEndpoint         string               `json:"registry_extension_endpoint"     xorm:"varchar(500) 'registry_extension_endpoint'"`
+	RegistryExtensionNetrc            bool                 `json:"registry_extension_netrc"        xorm:"DEFAULT FALSE 'registry_extension_netrc'"`
+	SecretExtensionEndpoint           string               `json:"secret_extension_endpoint"       xorm:"varchar(500) 'secret_extension_endpoint'"`
+	SecretExtensionNetrc              bool                 `json:"secret_extension_netrc"          xorm:"DEFAULT FALSE 'secret_extension_netrc'"`
 
 	// Rest API Only
 
@@ -153,24 +154,25 @@ func (r *Repo) Update(from *Repo) {
 
 // RepoPatch represents a repository patch object.
 type RepoPatch struct {
-	Config                       *string                    `json:"config_file,omitempty"`
-	RequireApproval              *string                    `json:"require_approval,omitempty"`
-	ApprovalAllowedUsers         *[]string                  `json:"approval_allowed_users,omitempty"`
-	Timeout                      *int64                     `json:"timeout,omitempty"`
-	Visibility                   *string                    `json:"visibility,omitempty"`
-	AllowPull                    *bool                      `json:"allow_pr,omitempty"`
-	AllowDeploy                  *bool                      `json:"allow_deploy,omitempty"`
-	CancelPreviousPipelineEvents *[]WebhookEvent            `json:"cancel_previous_pipeline_events"`
-	CancelPreviousPipelineSquash *bool                      `json:"cancel_previous_pipeline_squash,omitempty"`
-	NetrcTrusted                 *[]string                  `json:"netrc_trusted"`
-	Trusted                      *TrustedConfigurationPatch `json:"trusted"`
-	ConfigExtensionEndpoint      *string                    `json:"config_extension_endpoint,omitempty"`
-	ConfigExtensionExclusive     *bool                      `json:"config_extension_exclusive"`
-	ConfigExtensionNetrc         *bool                      `json:"config_extension_netrc"`
-	RegistryExtensionEndpoint    *string                    `json:"registry_extension_endpoint,omitempty"`
-	RegistryExtensionNetrc       *bool                      `json:"registry_extension_netrc"`
-	SecretExtensionEndpoint      *string                    `json:"secret_extension_endpoint,omitempty"`
-	SecretExtensionNetrc         *bool                      `json:"secret_extension_netrc,omitempty"`
+	Config                            *string                    `json:"config_file,omitempty"`
+	RequireApproval                   *string                    `json:"require_approval,omitempty"`
+	ApprovalAllowedUsers              *[]string                  `json:"approval_allowed_users,omitempty"`
+	Timeout                           *int64                     `json:"timeout,omitempty"`
+	Visibility                        *string                    `json:"visibility,omitempty"`
+	AllowPull                         *bool                      `json:"allow_pr,omitempty"`
+	AllowDeploy                       *bool                      `json:"allow_deploy,omitempty"`
+	CancelPreviousPipelineEvents      *[]WebhookEvent            `json:"cancel_previous_pipeline_events"`
+	CancelPreviousPipelineKeepRunning *bool                      `json:"cancel_previous_pipeline_keep_running,omitempty"`
+	CancelPreviousPipelineSquash      *bool                      `json:"cancel_previous_pipeline_squash,omitempty"`
+	NetrcTrusted                      *[]string                  `json:"netrc_trusted"`
+	Trusted                           *TrustedConfigurationPatch `json:"trusted"`
+	ConfigExtensionEndpoint           *string                    `json:"config_extension_endpoint,omitempty"`
+	ConfigExtensionExclusive          *bool                      `json:"config_extension_exclusive"`
+	ConfigExtensionNetrc              *bool                      `json:"config_extension_netrc"`
+	RegistryExtensionEndpoint         *string                    `json:"registry_extension_endpoint,omitempty"`
+	RegistryExtensionNetrc            *bool                      `json:"registry_extension_netrc"`
+	SecretExtensionEndpoint           *string                    `json:"secret_extension_endpoint,omitempty"`
+	SecretExtensionNetrc              *bool                      `json:"secret_extension_netrc,omitempty"`
 } //	@name	RepoPatch
 
 type ForgeRemoteID string

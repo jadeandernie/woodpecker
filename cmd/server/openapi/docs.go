@@ -5470,6 +5470,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/WebhookEvent"
                     }
                 },
+                "cancel_previous_pipeline_keep_running": {
+                    "type": "boolean"
+                },
                 "cancel_previous_pipeline_squash": {
                     "type": "boolean"
                 },
@@ -5592,6 +5595,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/WebhookEvent"
                     }
                 },
+                "cancel_previous_pipeline_keep_running": {
+                    "type": "boolean"
+                },
                 "cancel_previous_pipeline_squash": {
                     "type": "boolean"
                 },
@@ -5710,6 +5716,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/WebhookEvent"
                     }
+                },
+                "cancel_previous_pipeline_keep_running": {
+                    "type": "boolean"
                 },
                 "cancel_previous_pipeline_squash": {
                     "type": "boolean"

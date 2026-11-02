@@ -125,6 +125,7 @@ func PostRepo(c *gin.Context) {
 		repo.AllowPull = server.Config.Pipeline.DefaultAllowPullRequests
 		repo.AllowDeploy = false
 		repo.CancelPreviousPipelineEvents = server.Config.Pipeline.DefaultCancelPreviousPipelineEvents
+		repo.CancelPreviousPipelineKeepRunning = server.Config.Pipeline.DefaultCancelPreviousPipelineKeepRunning
 	}
 	repo.IsActive = true
 	repo.UserID = user.ID
@@ -294,6 +295,9 @@ func PatchRepo(c *gin.Context) {
 	}
 	if in.CancelPreviousPipelineEvents != nil {
 		repo.CancelPreviousPipelineEvents = *in.CancelPreviousPipelineEvents
+	}
+	if in.CancelPreviousPipelineKeepRunning != nil {
+		repo.CancelPreviousPipelineKeepRunning = *in.CancelPreviousPipelineKeepRunning
 	}
 	if in.CancelPreviousPipelineSquash != nil {
 		repo.CancelPreviousPipelineSquash = *in.CancelPreviousPipelineSquash

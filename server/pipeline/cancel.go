@@ -131,6 +131,11 @@ func cancelPreviousPipelines(
 			continue
 		}
 
+		// let a pipeline that already started finish, only skip the queued ones
+		if repo.CancelPreviousPipelineKeepRunning && active.Status == model.StatusRunning {
+			continue
+		}
+
 		if err = Cancel(ctx, _forge, _store, repo, user, active, &model.CancelInfo{
 			SupersededBy: pipeline.Number,
 		}); err != nil {

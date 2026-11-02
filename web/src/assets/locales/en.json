@@ -158,6 +158,8 @@
           "cancel": "Cancel previous pipelines",
           "desc": "Selected event triggers cancel pending and running pipelines of the same event before starting the next one.",
           "squash": "Squash pending pipelines",
+          "keep_running": "Keep running pipelines",
+          "keep_running_desc": "Only cancel previous pipelines that have not started yet. A pipeline that is already running is left to finish.",
           "squash_desc": "Only cancel previous pipelines that have not started yet, and run the new pipeline for their changed files too. A pipeline that is already running is left to finish."
         }
       },

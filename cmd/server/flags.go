@@ -207,6 +207,11 @@ var flags = append([]cli.Flag{
 			TrimSpace: true,
 		},
 	},
+	&cli.BoolFlag{
+		Sources: cli.EnvVars("WOODPECKER_DEFAULT_CANCEL_PREVIOUS_PIPELINE_KEEP_RUNNING"),
+		Name:    "default-cancel-previous-pipeline-keep-running",
+		Usage:   "The default value for only canceling previous pipelines that have not started yet, letting a running one finish.",
+	},
 	&cli.StringFlag{
 		Sources: cli.EnvVars("WOODPECKER_DEFAULT_CLONE_PLUGIN", "WOODPECKER_DEFAULT_CLONE_IMAGE"),
 		Name:    "default-clone-plugin",

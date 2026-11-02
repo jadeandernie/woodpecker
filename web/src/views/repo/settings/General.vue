@@ -151,6 +151,11 @@
           :options="cancelPreviousPipelineEventsOptions"
         />
         <Checkbox
+          v-model="repoSettings.cancel_previous_pipeline_keep_running"
+          :label="$t('repo.settings.general.cancel_prev.keep_running')"
+          :description="$t('repo.settings.general.cancel_prev.keep_running_desc')"
+        />
+        <Checkbox
           v-model="repoSettings.cancel_previous_pipeline_squash"
           :label="$t('repo.settings.general.cancel_prev.squash')"
           :description="$t('repo.settings.general.cancel_prev.squash_desc')"
@@ -220,6 +225,7 @@ function loadRepoSettings() {
     allow_pr: repo.value.allow_pr,
     allow_deploy: repo.value.allow_deploy,
     cancel_previous_pipeline_events: repo.value.cancel_previous_pipeline_events || [],
+    cancel_previous_pipeline_keep_running: repo.value.cancel_previous_pipeline_keep_running,
     cancel_previous_pipeline_squash: repo.value.cancel_previous_pipeline_squash,
     netrc_trusted: repo.value.netrc_trusted || [],
   };

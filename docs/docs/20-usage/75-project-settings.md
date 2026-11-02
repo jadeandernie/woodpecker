@@ -81,6 +81,8 @@ After this timeout a pipeline has to finish or will be treated as timed out.
 
 By enabling this option for a pipeline event previous pipelines of the same event and context will be canceled before starting the newly triggered one.
 
+With **Keep running pipelines** enabled only previous pipelines that have not started yet (pending or blocked) are canceled; a pipeline that is already running is left to finish. On a busy branch this runs the running pipeline to completion and then goes straight to the newest commit instead of working through every queued one.
+
 ### Squash pending pipelines
 
 By default a new pipeline cancels the previous ones even if they are already running, and only runs for its own changes. If [path filters](./20-workflow-syntax.md#path) decide which workflows run, the changes of a canceled pipeline are then never built or deployed.

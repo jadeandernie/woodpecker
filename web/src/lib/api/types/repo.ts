@@ -78,6 +78,9 @@ export interface Repo {
   // Events that will cancel running pipelines before starting a new one
   cancel_previous_pipeline_events: string[];
 
+  // Only cancel previous pipelines that have not started yet, let a running one finish
+  cancel_previous_pipeline_keep_running: boolean;
+
   // Only cancel previous pipelines that have not started yet and run their changed files in the new one
   cancel_previous_pipeline_squash: boolean;
 
@@ -136,6 +139,7 @@ export type RepoSettings = Pick<
   | 'allow_pr'
   | 'allow_deploy'
   | 'cancel_previous_pipeline_events'
+  | 'cancel_previous_pipeline_keep_running'
   | 'cancel_previous_pipeline_squash'
   | 'netrc_trusted'
 >;

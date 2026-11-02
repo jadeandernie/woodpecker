@@ -325,3 +325,58 @@ func TestStartSquash(t *testing.T) {
 		}
 	})
 }
+
+func TestCancelPreviousPipelines(t *testing.T) {
+	newPipeline := &model.Pipeline{ID: 10, Number: 10, Event: model.EventPush, Branch: "main", Status: model.StatusPending}
+	running := &model.Pipeline{ID: 1, Number: 1, Event: model.EventPush, Branch: "main", Status: model.StatusRunning}
+	pending := &model.Pipeline{ID: 2, Number: 2, Event: model.EventPush, Branch: "main", Status: model.StatusPending}
+	blocked := &model.Pipeline{ID: 3, Number: 3, Event: model.EventPush, Branch: "main", Status: model.StatusBlocked}
+	otherBranch := &model.Pipeline{ID: 4, Number: 4, Event: model.EventPush, Branch: "dev", Status: model.StatusPending}
+	otherEvent := &model.Pipeline{ID: 5, Number: 5, Event: model.EventTag, Branch: "main", Status: model.StatusPending}
+	active := []*model.Pipeline{newPipeline, running, pending, blocked, otherBranch, otherEvent}
+
+	tests := []struct {
+		name        string
+		events      []model.WebhookEvent
+		keepRunning bool
+		canceled    []int64
+	}{
+		{name: "event not configured", events: []model.WebhookEvent{model.EventTag}, canceled: nil},
+		{name: "setting off cancels running and pending", events: []model.WebhookEvent{model.EventPush}, canceled: []int64{1, 2, 3}},
+		{name: "keep running cancels only not started", events: []model.WebhookEvent{model.EventPush}, keepRunning: true, canceled: []int64{2, 3}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &model.Repo{ID: 1, CancelPreviousPipelineEvents: tt.events, CancelPreviousPipelineKeepRunning: tt.keepRunning}
+			user := &model.User{ID: 1}
+
+			s := store_mocks.NewMockStore(t)
+			scheduler := scheduler_mocks.NewMockScheduler(t)
+			var canceled []int64
+			if len(tt.events) > 0 && tt.events[0] == newPipeline.Event {
+				s.EXPECT().GetActivePipelineList(repo).Return(active, nil).Once()
+			}
+			if len(tt.canceled) > 0 {
+				s.EXPECT().WorkflowGetTree(mock.Anything).Return(nil, nil).Times(2 * len(tt.canceled))
+				s.EXPECT().UpdatePipeline(mock.Anything).RunAndReturn(func(p *model.Pipeline) error {
+					assert.Equal(t, model.StatusCanceled, p.Status)
+					if assert.NotNil(t, p.CancelInfo) {
+						assert.Equal(t, newPipeline.Number, p.CancelInfo.SupersededBy)
+					}
+					canceled = append(canceled, p.ID)
+					return nil
+				}).Times(len(tt.canceled))
+				scheduler.EXPECT().CancelWorkflows(mock.Anything, mock.Anything).Return(nil).Times(len(tt.canceled))
+				scheduler.EXPECT().PublishPipelineEvent(mock.Anything, repo, mock.Anything).Return(nil).Times(len(tt.canceled))
+			}
+
+			previous := server.Config.Services.Scheduler
+			server.Config.Services.Scheduler = scheduler
+			t.Cleanup(func() { server.Config.Services.Scheduler = previous })
+
+			assert.NoError(t, cancelPreviousPipelines(t.Context(), forge_mocks.NewMockForge(t), s, newPipeline, repo, user))
+			assert.Equal(t, tt.canceled, canceled)
+		})
+	}
+}
