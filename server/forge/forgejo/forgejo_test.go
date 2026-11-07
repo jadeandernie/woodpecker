@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -230,9 +231,11 @@ func TestGetStatus(t *testing.T) {
 func newTestForge(t *testing.T, routes map[string]http.HandlerFunc) *Forgejo {
 	t.Helper()
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"version":"7.0.2"}`))
-	})
+	if _, ok := routes["/api/v1/version"]; !ok {
+		mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"version":"7.0.2"}`))
+		})
+	}
 	for route, handler := range routes {
 		mux.HandleFunc(route, handler)
 	}
@@ -505,6 +508,83 @@ func TestFileAndDir(t *testing.T) {
 
 	_, err = g.Dir(t.Context(), user, repo, pipeline, ".missing")
 	assert.ErrorIs(t, err, &forge_types.ErrConfigNotFound{})
+}
+
+func TestDirLoadsFilesInParallel(t *testing.T) {
+	const fileCount = 25
+	listing := make([]string, 0, fileCount)
+	for i := range fileCount {
+		listing = append(listing, fmt.Sprintf(`{"type":"file","path":".woodpecker/%02d.yaml"}`, i))
+	}
+
+	// the first files wait for each other, so Dir only gets past them
+	// quickly if it loads as many files at once as it may
+	allowed := make(chan struct{})
+	release := sync.OnceFunc(func() { close(allowed) })
+	timer := time.AfterFunc(5*time.Second, release)
+	t.Cleanup(func() { timer.Stop() })
+
+	var versionRequests, arrived, inFlight, maxInFlight atomic.Int32
+	g := newTestForge(t, map[string]http.HandlerFunc{
+		"/api/v1/version": func(w http.ResponseWriter, _ *http.Request) {
+			versionRequests.Add(1)
+			_, _ = w.Write([]byte(`{"version":"7.0.2"}`))
+		},
+		"/api/v1/repos/owner/repo/contents/.woodpecker": func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte("[" + strings.Join(listing, ",") + "]"))
+		},
+		"/api/v1/repos/owner/repo/raw/": func(w http.ResponseWriter, r *http.Request) {
+			n := inFlight.Add(1)
+			defer inFlight.Add(-1)
+			for m := maxInFlight.Load(); n > m && !maxInFlight.CompareAndSwap(m, n); m = maxInFlight.Load() {
+			}
+			if arrived.Add(1) == maxParallelFileFetches {
+				release()
+			}
+			<-allowed
+
+			name := strings.TrimPrefix(r.URL.Path, "/api/v1/repos/owner/repo/raw/")
+			_, _ = w.Write([]byte("steps: " + name))
+		},
+	})
+	user := &model.User{AccessToken: "token"}
+	repo := &model.Repo{Owner: "owner", Name: "repo"}
+	pipeline := &model.Pipeline{Commit: "abc"}
+
+	metas, err := g.Dir(t.Context(), user, repo, pipeline, ".woodpecker")
+	require.NoError(t, err)
+
+	// files keep the order of the listing, whatever order they were loaded in
+	require.Len(t, metas, fileCount)
+	for i, meta := range metas {
+		name := fmt.Sprintf(".woodpecker/%02d.yaml", i)
+		assert.Equal(t, &forge_types.FileMeta{Name: name, Data: []byte("steps: " + name)}, meta)
+	}
+	assert.EqualValues(t, maxParallelFileFetches, maxInFlight.Load(), "files loaded at once")
+	assert.EqualValues(t, 1, versionRequests.Load(), "server version checks")
+}
+
+func TestDirFailsIfAFileFails(t *testing.T) {
+	g := newTestForge(t, map[string]http.HandlerFunc{
+		"/api/v1/repos/owner/repo/contents/.woodpecker": func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`[` +
+				`{"type":"file","path":".woodpecker/a.yaml"},` +
+				`{"type":"file","path":".woodpecker/b.yaml"},` +
+				`{"type":"file","path":".woodpecker/c.yaml"}]`))
+		},
+		"/api/v1/repos/owner/repo/raw/": func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/v1/repos/owner/repo/raw/.woodpecker/b.yaml" {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			_, _ = w.Write([]byte("steps: ok"))
+		},
+	})
+
+	metas, err := g.Dir(t.Context(), &model.User{}, &model.Repo{Owner: "owner", Name: "repo"}, &model.Pipeline{Commit: "abc"}, ".woodpecker")
+	assert.Nil(t, metas)
+	assert.ErrorContains(t, err, "multi-pipeline cannot get .woodpecker/b.yaml")
+	assert.NotErrorIs(t, err, &forge_types.ErrConfigNotFound{})
 }
 
 func TestBranchHead(t *testing.T) {

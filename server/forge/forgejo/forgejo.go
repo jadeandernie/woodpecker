@@ -27,6 +27,7 @@ import (
 	"codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v4"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
+	"golang.org/x/sync/errgroup"
 
 	"go.woodpecker-ci.org/woodpecker/v3/pipeline/frontend/metadata"
 	"go.woodpecker-ci.org/woodpecker/v3/server"
@@ -38,6 +39,9 @@ import (
 	"go.woodpecker-ci.org/woodpecker/v3/shared/httputil"
 	shared_utils "go.woodpecker-ci.org/woodpecker/v3/shared/utils"
 )
+
+// maxParallelFileFetches bounds how many files of a config folder Dir loads at once.
+const maxParallelFileFetches = 10
 
 const (
 	authorizeTokenURL = "%s/login/oauth/authorize"
@@ -271,6 +275,11 @@ func (c *Forgejo) File(ctx context.Context, u *model.User, r *model.Repo, b *mod
 		return nil, err
 	}
 
+	return getFile(client, r, b, f)
+}
+
+// getFile loads a file at the pipeline's commit, reporting a missing file as a missing config.
+func getFile(client *forgejo.Client, r *model.Repo, b *model.Pipeline, f string) ([]byte, error) {
 	cfg, resp, err := client.GetFile(r.Owner, r.Name, b.Commit, f)
 	if err != nil && resp != nil && resp.StatusCode == http.StatusNotFound {
 		return nil, errors.Join(err, &forge_types.ErrConfigNotFound{Configs: []string{f}})
@@ -279,8 +288,7 @@ func (c *Forgejo) File(ctx context.Context, u *model.User, r *model.Repo, b *mod
 }
 
 func (c *Forgejo) Dir(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, f string) ([]*forge_types.FileMeta, error) {
-	var configs []*forge_types.FileMeta
-
+	// one client for the listing and all files, so the server version is only checked once
 	client, err := c.newClientToken(ctx, u.AccessToken)
 	if err != nil {
 		return nil, err
@@ -295,18 +303,35 @@ func (c *Forgejo) Dir(ctx context.Context, u *model.User, r *model.Repo, b *mode
 		return nil, err
 	}
 
+	// sub folders are no pipeline files
+	var paths []string
 	for _, e := range contents {
 		if e.Type == "file" {
-			data, err := c.File(ctx, u, r, b, e.Path)
-			if err != nil {
-				return nil, fmt.Errorf("multi-pipeline cannot get %s: %w", e.Path, err)
-			}
-
-			configs = append(configs, &forge_types.FileMeta{
-				Name: e.Path,
-				Data: data,
-			})
+			paths = append(paths, e.Path)
 		}
+	}
+	if len(paths) == 0 {
+		return nil, nil
+	}
+
+	// load the files in parallel with a bounded number of workers on the shared
+	// client, whose requests the first error cancels
+	configs := make([]*forge_types.FileMeta, len(paths))
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(maxParallelFileFetches)
+	client.SetContext(gCtx)
+	for i, path := range paths {
+		g.Go(func() error {
+			data, err := getFile(client, r, b, path)
+			if err != nil {
+				return fmt.Errorf("multi-pipeline cannot get %s: %w", path, err)
+			}
+			configs[i] = &forge_types.FileMeta{Name: path, Data: data}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	return configs, nil
