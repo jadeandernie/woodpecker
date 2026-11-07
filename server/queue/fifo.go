@@ -74,14 +74,36 @@ func NewMemoryQueue(ctx context.Context) Queue {
 	return q
 }
 
-// PushAtOnce pushes multiple tasks to the tail of this queue.
+// PushAtOnce pushes multiple tasks to the tail of this queue. A task queued in
+// place of an earlier pipeline (see model.Task.QueuedInPlaceOf) goes to that
+// pipeline's place instead: before the first pending task that comes after it
+// in pipeline order.
 func (q *fifo) PushAtOnce(_ context.Context, tasks []*model.Task) error {
 	q.Lock()
 	for _, task := range tasks {
-		q.pending.PushBack(task)
+		if task.QueuedInPlaceOf == 0 {
+			q.pending.PushBack(task)
+			continue
+		}
+		q.insertPending(task)
 	}
 	q.Unlock()
 	return nil
+}
+
+// insertPending inserts the task into pending before the first task that comes
+// after it in pipeline order, or at the tail if there is none.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) insertPending(task *model.Task) {
+	for element := q.pending.Front(); element != nil; element = element.Next() {
+		pending, _ := element.Value.(*model.Task)
+		if comparePipelineOrder(task, pending) < 0 {
+			q.pending.InsertBefore(task, element)
+			return
+		}
+	}
+	q.pending.PushBack(task)
 }
 
 // Poll retrieves and removes a task head of this queue.
@@ -353,12 +375,23 @@ func (q *fifo) resubmitWaiting() {
 
 // comparePipelineOrder orders tasks by the creation of their pipeline: by the
 // Created timestamp, with the pipeline ID as tiebreaker for pipelines created
-// within the same second. Tasks of the same pipeline compare equal.
+// within the same second. A task queued in place of an earlier pipeline is
+// ordered by that pipeline's ID, right after it. Tasks of the same pipeline
+// compare equal.
 func comparePipelineOrder(a, b *model.Task) int {
 	return cmp.Or(
 		cmp.Compare(a.Created, b.Created),
+		cmp.Compare(queuePlace(a), queuePlace(b)),
 		cmp.Compare(a.PipelineID, b.PipelineID),
 	)
+}
+
+// queuePlace is the ID of the pipeline whose place in the queue the task has.
+func queuePlace(task *model.Task) int64 {
+	if task.QueuedInPlaceOf != 0 {
+		return task.QueuedInPlaceOf
+	}
+	return task.PipelineID
 }
 
 func (q *fifo) assignToWorker() (*list.Element, *worker) {

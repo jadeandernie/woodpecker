@@ -5777,7 +5777,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "created": {
-                    "description": "Created is the unix timestamp the task's pipeline was created at. It\ndefines the queue ordering across pipelines.",
+                    "description": "Created is the unix timestamp the task is ordered by in the queue. It is\nthe creation time of the task's pipeline, or of the pipeline named by\nQueuedInPlaceOf if the task took over that pipeline's place.",
                     "type": "integer"
                 },
                 "dep_status": {
@@ -5808,6 +5808,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "pipeline_id": {
+                    "type": "integer"
+                },
+                "queued_in_place_of": {
+                    "description": "QueuedInPlaceOf is the ID of an earlier pipeline whose place in the queue\nthe task took over, or 0 if it is queued in the place of its own pipeline.\nA pipeline squashing previous pipelines takes the place of the oldest one.",
                     "type": "integer"
                 },
                 "repo_id": {
@@ -6286,7 +6290,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "created": {
-                    "description": "Created is the unix timestamp the task's pipeline was created at. It\ndefines the queue ordering across pipelines.",
+                    "description": "Created is the unix timestamp the task is ordered by in the queue. It is\nthe creation time of the task's pipeline, or of the pipeline named by\nQueuedInPlaceOf if the task took over that pipeline's place.",
                     "type": "integer"
                 },
                 "dep_status": {
@@ -6320,6 +6324,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "pipeline_number": {
+                    "type": "integer"
+                },
+                "queued_in_place_of": {
+                    "description": "QueuedInPlaceOf is the ID of an earlier pipeline whose place in the queue\nthe task took over, or 0 if it is queued in the place of its own pipeline.\nA pipeline squashing previous pipelines takes the place of the oldest one.",
                     "type": "integer"
                 },
                 "repo_id": {

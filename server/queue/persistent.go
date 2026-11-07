@@ -28,7 +28,9 @@ import (
 )
 
 // WithTaskStore returns a queue that is backed by the TaskStore. This
-// ensures the task Queue can be restored when the system starts.
+// ensures the task Queue can be restored when the system starts. A task queued
+// in place of an earlier pipeline goes ahead of the pipelines created after
+// that one again, whatever order the store lists the tasks in.
 func WithTaskStore(ctx context.Context, q Queue, s store.Store) Queue {
 	tasks, _ := s.TaskList()
 	if err := q.PushAtOnce(ctx, tasks); err != nil {
@@ -42,7 +44,8 @@ type persistentQueue struct {
 	store store.Store
 }
 
-// PushAtOnce pushes multiple tasks to the tail of this queue.
+// PushAtOnce stores the tasks and pushes them to the underlying queue, which
+// places them; see Queue.PushAtOnce.
 func (q *persistentQueue) PushAtOnce(c context.Context, tasks []*model.Task) error {
 	// TODO: invent store.NewSession who return context including a session and make TaskInsert & TaskDelete use it
 	for _, task := range tasks {

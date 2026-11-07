@@ -46,3 +46,29 @@ func TestTaskList(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, list, 0, "Want empty task list after delete")
 }
+
+// The queue is restored from the store when the server starts, so the place a
+// task took over must come back with it.
+func TestTaskQueuedInPlaceOf(t *testing.T) {
+	store, closer := newTestStore(t, new(model.Task))
+	defer closer()
+
+	assert.NoError(t, store.TaskInsert(&model.Task{ID: "own", PipelineID: 5, Created: 500}))
+	assert.NoError(t, store.TaskInsert(&model.Task{ID: "taken", PipelineID: 7, Created: 300, QueuedInPlaceOf: 3}))
+
+	list, err := store.TaskList()
+	assert.NoError(t, err)
+	assert.Len(t, list, 2)
+	for _, task := range list {
+		switch task.ID {
+		case "own":
+			assert.Equal(t, int64(500), task.Created)
+			assert.Zero(t, task.QueuedInPlaceOf)
+		case "taken":
+			assert.Equal(t, int64(300), task.Created)
+			assert.Equal(t, int64(3), task.QueuedInPlaceOf)
+		default:
+			t.Errorf("unexpected task %s", task.ID)
+		}
+	}
+}

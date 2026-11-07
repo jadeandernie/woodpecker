@@ -1034,6 +1034,101 @@ func TestFifoPipelineOrder(t *testing.T) {
 	})
 }
 
+func TestFifoQueuedInPlaceOf(t *testing.T) {
+	t.Run("pipeline queued in place of an earlier one goes to its place", func(t *testing.T) {
+		ctx, _, q := setupTestQueue(t)
+
+		// main pushes 1 and 3 wait, a pull request (2) and another branch
+		// (4) were created in between.
+		main1 := &model.Task{ID: "1-build", PipelineID: 1, Created: 100}
+		pull2 := &model.Task{ID: "2-build", PipelineID: 2, Created: 150}
+		main3 := &model.Task{ID: "3-build", PipelineID: 3, Created: 180}
+		other4 := &model.Task{ID: "4-build", PipelineID: 4, Created: 190}
+		for _, task := range []*model.Task{main1, pull2, main3, other4} {
+			assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{task}))
+		}
+
+		// main push 5 squashes 1 and 3 and takes the place of 1.
+		build := &model.Task{ID: "5-build", PipelineID: 5, Created: 100, QueuedInPlaceOf: 1}
+		deploy := &model.Task{
+			ID:              "5-deploy",
+			PipelineID:      5,
+			Created:         100,
+			QueuedInPlaceOf: 1,
+			Dependencies:    []string{"5-build"},
+			DepStatus:       make(map[string]model.StatusValue),
+		}
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{build, deploy}))
+		waitForProcess()
+		assert.Equal(t, []string{"1-build", "5-build", "2-build", "3-build", "4-build"}, pendingIDs(q.Info(ctx)))
+
+		// the superseded pipelines get canceled once 5 is queued.
+		assert.NoError(t, q.ErrorAtOnce(ctx, []string{"1-build", "3-build"}, ErrCancel))
+		waitForProcess()
+		assert.Equal(t, []string{"5-build", "2-build", "4-build"}, pendingIDs(q.Info(ctx)))
+
+		got, err := q.Poll(ctx, 1, filterFnTrue)
+		assert.NoError(t, err)
+		assert.Equal(t, build, got, "the squashing pipeline must not wait behind pipelines created after the oldest it supersedes")
+		assert.NoError(t, q.Done(ctx, got.ID, model.StatusSuccess))
+		waitForProcess()
+
+		// its deploy keeps that place as well.
+		assert.Equal(t, []string{"5-deploy", "2-build", "4-build"}, pendingIDs(q.Info(ctx)))
+	})
+
+	t.Run("the earlier pipeline's ID breaks a tie in creation time", func(t *testing.T) {
+		ctx, _, q := setupTestQueue(t)
+
+		// all three were created in the same second, in the order of their IDs.
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{
+			{ID: "1-build", PipelineID: 1, Created: 100},
+			{ID: "2-build", PipelineID: 2, Created: 100},
+			{ID: "3-build", PipelineID: 3, Created: 100},
+		}))
+
+		squash := &model.Task{ID: "5-build", PipelineID: 5, Created: 100, QueuedInPlaceOf: 2}
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{squash}))
+
+		assert.Equal(t, []string{"1-build", "2-build", "5-build", "3-build"}, pendingIDs(q.Info(ctx)))
+	})
+
+	t.Run("workflows of the pipeline keep their order", func(t *testing.T) {
+		ctx, _, q := setupTestQueue(t)
+
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{
+			{ID: "1-build", PipelineID: 1, Created: 100},
+			{ID: "2-build", PipelineID: 2, Created: 200},
+		}))
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{
+			{ID: "5-z", PipelineID: 5, Created: 100, QueuedInPlaceOf: 1},
+			{ID: "5-a", PipelineID: 5, Created: 100, QueuedInPlaceOf: 1},
+			{ID: "5-m", PipelineID: 5, Created: 100, QueuedInPlaceOf: 1},
+		}))
+
+		assert.Equal(t, []string{"1-build", "5-z", "5-a", "5-m", "2-build"}, pendingIDs(q.Info(ctx)))
+	})
+
+	t.Run("other pipelines still go to the back", func(t *testing.T) {
+		ctx, _, q := setupTestQueue(t)
+
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{
+			{ID: "2-build", PipelineID: 2, Created: 100},
+			{ID: "3-build", PipelineID: 3, Created: 200},
+		}))
+		// e.g. a pipeline approved long after it was created
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{
+			{ID: "1-build", PipelineID: 1, Created: 50},
+		}))
+		// and one created just now
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{
+			{ID: "4-build", PipelineID: 4, Created: 300},
+		}))
+
+		assert.Equal(t, []string{"2-build", "3-build", "1-build", "4-build"}, pendingIDs(q.Info(ctx)))
+	})
+}
+
 func pendingIDs(info InfoT) []string {
 	ids := make([]string, 0, len(info.Pending))
 	for _, task := range info.Pending {
