@@ -5958,7 +5958,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "concurrency_group": {
-                    "description": "ConcurrencyGroup identifies tasks that are limited against each other.\nIt is empty when no concurrency limit applies.",
+                    "description": "ConcurrencyGroup identifies tasks that are limited against each other.\nWithout a ConcurrencyLimit, the tasks of one pipeline in the group run at\na time (see ExclusiveGroup). It is empty when no concurrency applies.",
                     "type": "string"
                 },
                 "concurrency_limit": {
@@ -6489,7 +6489,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "concurrency_group": {
-                    "description": "ConcurrencyGroup identifies tasks that are limited against each other.\nIt is empty when no concurrency limit applies.",
+                    "description": "ConcurrencyGroup identifies tasks that are limited against each other.\nWithout a ConcurrencyLimit, the tasks of one pipeline in the group run at\na time (see ExclusiveGroup). It is empty when no concurrency applies.",
                     "type": "string"
                 },
                 "concurrency_limit": {
@@ -6587,6 +6587,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/Step"
                     }
+                },
+                "concurrency_group": {
+                    "description": "ConcurrencyGroup is the concurrency group without a limit the workflow\nis in, or empty if it is in none. Of the workflows of a repository's\npipelines in such a group, those of one pipeline run at a time, and a\npipeline's that have not started yet are superseded by a newer one's.",
+                    "type": "string"
                 },
                 "depends_on": {
                     "type": "array",

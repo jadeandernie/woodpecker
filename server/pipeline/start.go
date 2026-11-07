@@ -32,7 +32,9 @@ import (
 // If the repo squashes pending pipelines, superseded are the previous pipelines
 // squashed into this one (see squashPreviousPipelines); this pipeline is queued
 // in the place of the oldest of them, and they are canceled once it is queued.
-// No other previous pipeline is canceled.
+// No other previous pipeline is canceled. If the pipeline has workflows in a
+// concurrency group without a limit, the queued workflows of older pipelines in
+// the group are superseded (see supersedeQueuedUnits).
 func start(ctx context.Context, forge forge.Forge, store store.Store, activePipeline *model.Pipeline, user *model.User, repo *model.Repo, pipelineItems []*builder.Item, superseded []*model.Pipeline) (*model.Pipeline, error) {
 	// call to cancel previous pipelines if needed
 	if !repo.CancelPreviousPipelineSquash {
@@ -45,6 +47,17 @@ func start(ctx context.Context, forge forge.Forge, store store.Store, activePipe
 	org, err := store.OrgGet(repo.OrgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load org %d of repo %s: %w", repo.OrgID, repo.FullName, err)
+	}
+
+	// the concurrency groups without a limit the pipeline has workflows in,
+	// and the other active pipelines that may have workflows in them too
+	groups := groupNames(pipelineItems)
+	var others []pipelineTree
+	if len(groups) > 0 {
+		others = otherActivePipelines(store, repo, activePipeline)
+		// before the pipeline is queued, so the queue does not hand out its
+		// workflows in a group while another pipeline's are running
+		holdGroupsInProgress(ctx, repo, activePipeline, groups, others)
 	}
 
 	tasks, err := pipelineTasks(repo, org, activePipeline, pipelineItems)
@@ -66,6 +79,12 @@ func start(ctx context.Context, forge forge.Forge, store store.Store, activePipe
 	// only cancel the superseded pipelines now that their changes are queued
 	// with this one, so a failure to queue it loses none of them
 	cancelSupersededPipelines(ctx, forge, store, activePipeline, superseded, repo, user)
+
+	// keep only the newest of the queued units in each group, now that this
+	// pipeline's is queued too
+	if len(groups) > 0 {
+		activePipeline = supersedeQueuedUnits(ctx, forge, store, activePipeline, groups, others, superseded, repo, user)
+	}
 
 	updatePipelineStatus(ctx, forge, activePipeline, repo, user)
 

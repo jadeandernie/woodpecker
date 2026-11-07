@@ -4,5 +4,4 @@ steps:
     commands:
       - echo deploying
 
-concurrency:
-  group: deploy-production
+concurrency: {}

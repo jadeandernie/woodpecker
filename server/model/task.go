@@ -38,7 +38,8 @@ type Task struct {
 	// ConcurrencyGroup that may run at once. A value <= 0 means unlimited.
 	ConcurrencyLimit int `json:"concurrency_limit" xorm:"NOT NULL DEFAULT 0 'concurrency_limit'"`
 	// ConcurrencyGroup identifies tasks that are limited against each other.
-	// It is empty when no concurrency limit applies.
+	// Without a ConcurrencyLimit, the tasks of one pipeline in the group run at
+	// a time (see ExclusiveGroup). It is empty when no concurrency applies.
 	ConcurrencyGroup string `json:"concurrency_group" xorm:"'concurrency_group'"`
 	// Created is the unix timestamp the task is ordered by in the queue. It is
 	// the creation time of the task's pipeline, or of the pipeline named by
@@ -53,6 +54,16 @@ type Task struct {
 // TableName return database table name for xorm.
 func (Task) TableName() string {
 	return "tasks"
+}
+
+// ExclusiveGroup returns the concurrency group without a limit the task is in,
+// or "" if it is in none. Of the tasks in such a group, only those of the
+// pipeline holding it are handed out; see the concurrency docs.
+func (t *Task) ExclusiveGroup() string {
+	if t.ConcurrencyLimit > 0 {
+		return ""
+	}
+	return t.ConcurrencyGroup
 }
 
 func (t *Task) String() string {

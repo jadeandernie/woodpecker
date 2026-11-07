@@ -64,8 +64,12 @@ func pipelineTasks(repo *model.Repo, org *model.Org, activePipeline *model.Pipel
 			if item.ConcurrencyGroup == "" {
 				task.ConcurrencyGroup = fmt.Sprintf("%d/%s/", repo.ID, item.Workflow.Name)
 			} else {
-				task.ConcurrencyGroup = fmt.Sprintf("%d//%s", repo.ID, item.ConcurrencyGroup)
+				task.ConcurrencyGroup = concurrencyGroupKey(repo.ID, item.ConcurrencyGroup)
 			}
+		} else if group := exclusiveGroup(item); group != "" {
+			// A group without a limit: one pipeline's workflows in it run at a
+			// time (see model.Task.ExclusiveGroup and concurrency_group.go).
+			task.ConcurrencyGroup = concurrencyGroupKey(repo.ID, group)
 		}
 
 		task.Data, err = json.Marshal(rpc.Workflow{
@@ -80,6 +84,21 @@ func pipelineTasks(repo *model.Repo, org *model.Org, activePipeline *model.Pipel
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
+}
+
+// exclusiveGroup returns the concurrency group without a limit the workflow is
+// in, or "" if it is in none: `concurrency: {group: <name>}` without a limit.
+func exclusiveGroup(item *builder.Item) string {
+	if item.ConcurrencyLimit > 0 {
+		return ""
+	}
+	return item.ConcurrencyGroup
+}
+
+// concurrencyGroupKey returns the queue's concurrency group of the repo's group
+// of the given name.
+func concurrencyGroupKey(repoID int64, group string) string {
+	return fmt.Sprintf("%d//%s", repoID, group)
 }
 
 func getTaskDependencies(dependsOn []string, items []*builder.Item) (taskIDs []string) {

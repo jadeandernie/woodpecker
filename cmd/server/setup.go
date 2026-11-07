@@ -33,6 +33,7 @@ import (
 	"go.woodpecker-ci.org/woodpecker/v3/server/forge/setup"
 	"go.woodpecker-ci.org/woodpecker/v3/server/logging"
 	"go.woodpecker-ci.org/woodpecker/v3/server/model"
+	"go.woodpecker-ci.org/woodpecker/v3/server/pipeline"
 	"go.woodpecker-ci.org/woodpecker/v3/server/pubsub/memory"
 	"go.woodpecker-ci.org/woodpecker/v3/server/queue"
 	"go.woodpecker-ci.org/woodpecker/v3/server/scheduler"
@@ -169,6 +170,9 @@ func setupEvilGlobals(ctx context.Context, c *cli.Command, s store.Store) (err e
 		return fmt.Errorf("could not setup queue: %w", err)
 	}
 	server.Config.Services.Scheduler = scheduler.NewScheduler(ctx, s, queue, pubsub)
+	// before agents connect: the restored queue only has the workflows that
+	// were not handed out yet
+	pipeline.HoldGroupsInProgress(ctx, s)
 	server.Config.Services.Manager, err = services.NewManager(c, s, setup.Forge)
 	if err != nil {
 		return fmt.Errorf("could not setup service manager: %w", err)
