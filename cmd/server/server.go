@@ -43,6 +43,7 @@ import (
 	"go.woodpecker-ci.org/woodpecker/v3/server/router"
 	"go.woodpecker-ci.org/woodpecker/v3/server/router/middleware"
 	"go.woodpecker-ci.org/woodpecker/v3/server/store"
+	"go.woodpecker-ci.org/woodpecker/v3/server/train"
 	"go.woodpecker-ci.org/woodpecker/v3/server/web"
 	"go.woodpecker-ci.org/woodpecker/v3/shared/logger"
 	"go.woodpecker-ci.org/woodpecker/v3/version"
@@ -136,6 +137,16 @@ func run(ctx context.Context, c *cli.Command) error {
 			return err
 		}
 		log.Info().Msg("cron service stopped")
+		return nil
+	})
+
+	serviceWaitingGroup.Go(func() error {
+		log.Info().Msg("starting merge train service ...")
+		if err := train.Start(ctx, _store); err != nil {
+			go stopServerFunc(err)
+			return err
+		}
+		log.Info().Msg("merge train service stopped")
 		return nil
 	})
 

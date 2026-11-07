@@ -4115,6 +4115,117 @@ const docTemplate = `{
                 }
             }
         },
+        "/repos/{repo_id}/train": {
+            "get": {
+                "description": "Returns the repository's merge train settings and state: the phase, whether the train branch is frozen\nand why, the cars under test, the current investigations, the reverts and the recent history.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Repositories"
+                ],
+                "summary": "Get the merge train of a repository",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003cpersonal access token\u003e",
+                        "description": "Insert your personal access token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "the repository id",
+                        "name": "repo_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/TrainStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/repos/{repo_id}/train/resume": {
+            "post": {
+                "description": "Unfreezes the train branch, drops the current investigations and lets the train promote again.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Repositories"
+                ],
+                "summary": "Resume a frozen merge train",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003cpersonal access token\u003e",
+                        "description": "Insert your personal access token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "the repository id",
+                        "name": "repo_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/TrainStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/repos/{repo_id}/train/retry": {
+            "post": {
+                "description": "Starts a fresh promote of the train branch head, for example after a held or canceled promote.\nRefused while a promote or an investigation runs, or while the train is frozen.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Repositories"
+                ],
+                "summary": "Promote the train branch head again",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003cpersonal access token\u003e",
+                        "description": "Insert your personal access token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "the repository id",
+                        "name": "repo_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/TrainStatus"
+                        }
+                    }
+                }
+            }
+        },
         "/repos/{repo_id}/workflows": {
             "get": {
                 "description": "Fetches the pipeline config of the branch head and lists the workflows that run on the manual event.",
@@ -5355,6 +5466,9 @@ const docTemplate = `{
                 "pr_milestone": {
                     "type": "string"
                 },
+                "promote": {
+                    "$ref": "#/definitions/PromoteInfo"
+                },
                 "ref": {
                     "type": "string"
                 },
@@ -5414,6 +5528,13 @@ const docTemplate = `{
                 "version": {
                     "type": "string"
                 },
+                "workflow_filter": {
+                    "description": "only run these workflows and their hard dependencies; none left means filtered",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "workflows": {
                     "type": "array",
                     "items": {
@@ -5442,6 +5563,41 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "PromoteInfo": {
+            "type": "object",
+            "properties": {
+                "base": {
+                    "description": "Base is the target branch commit the train branch is compared against.",
+                    "type": "string"
+                },
+                "cars": {
+                    "description": "Cars are the train branch's first-parent commits under test, oldest first.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "kind": {
+                    "description": "Kind tells a train promote from an investigation run.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/PromoteKind"
+                        }
+                    ]
+                }
+            }
+        },
+        "PromoteKind": {
+            "type": "string",
+            "enum": [
+                "train",
+                "bisect"
+            ],
+            "x-enum-varnames": [
+                "PromoteKindTrain",
+                "PromoteKindBisect"
+            ]
         },
         "PullRequest": {
             "type": "object",
@@ -5651,6 +5807,14 @@ const docTemplate = `{
                 "timeout": {
                     "type": "integer"
                 },
+                "train": {
+                    "description": "Train configures the merge train; nil means the defaults with the train\nswitched off.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/TrainSettings"
+                        }
+                    ]
+                },
                 "trusted": {
                     "$ref": "#/definitions/model.TrustedConfiguration"
                 },
@@ -5786,6 +5950,14 @@ const docTemplate = `{
                 "timeout": {
                     "type": "integer"
                 },
+                "train": {
+                    "description": "Train configures the merge train; nil means the defaults with the train\nswitched off.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/TrainSettings"
+                        }
+                    ]
+                },
                 "trusted": {
                     "$ref": "#/definitions/model.TrustedConfiguration"
                 },
@@ -5863,6 +6035,12 @@ const docTemplate = `{
                 },
                 "timeout": {
                     "type": "integer"
+                },
+                "train": {
+                    "$ref": "#/definitions/TrainSettingsPatch"
+                },
+                "train_bot_token": {
+                    "type": "string"
                 },
                 "trusted": {
                     "$ref": "#/definitions/model.TrustedConfigurationPatch"
@@ -6234,6 +6412,321 @@ const docTemplate = `{
                 }
             }
         },
+        "TrainCar": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "parent": {
+                    "type": "string"
+                },
+                "pr": {
+                    "type": "integer"
+                },
+                "sha": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "TrainEvent": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "pipeline": {
+                    "type": "integer"
+                },
+                "sha": {
+                    "type": "string"
+                },
+                "time": {
+                    "type": "integer"
+                }
+            }
+        },
+        "TrainInvestigation": {
+            "type": "object",
+            "properties": {
+                "bad": {
+                    "description": "Bad is the index of the oldest candidate known bad.",
+                    "type": "integer"
+                },
+                "candidates": {
+                    "description": "Candidates are the SHAs of the cars whose changes match the workflow's\npath filter, oldest first.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "culprit": {
+                    "type": "string"
+                },
+                "detail": {
+                    "type": "string"
+                },
+                "good": {
+                    "description": "Good is the index of the newest candidate known good, -1 for the base.",
+                    "type": "integer"
+                },
+                "outcome": {
+                    "$ref": "#/definitions/TrainOutcome"
+                },
+                "probes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/TrainProbe"
+                    }
+                },
+                "step": {
+                    "$ref": "#/definitions/TrainInvestigationStep"
+                },
+                "workflow": {
+                    "type": "string"
+                }
+            }
+        },
+        "TrainInvestigationStep": {
+            "type": "string",
+            "enum": [
+                "recheck",
+                "flake_check",
+                "bisect",
+                "done"
+            ],
+            "x-enum-varnames": [
+                "TrainStepRecheck",
+                "TrainStepFlakeCheck",
+                "TrainStepBisect",
+                "TrainStepDone"
+            ]
+        },
+        "TrainOutcome": {
+            "type": "string",
+            "enum": [
+                "culprit",
+                "flake",
+                "base_broken",
+                "inconclusive"
+            ],
+            "x-enum-varnames": [
+                "TrainOutcomeCulprit",
+                "TrainOutcomeFlake",
+                "TrainOutcomeBaseBroken",
+                "TrainOutcomeInconclusive"
+            ]
+        },
+        "TrainPhase": {
+            "type": "string",
+            "enum": [
+                "idle",
+                "promoting",
+                "investigating",
+                "held",
+                "frozen"
+            ],
+            "x-enum-varnames": [
+                "TrainIdle",
+                "TrainPromoting",
+                "TrainInvestigating",
+                "TrainHeld",
+                "TrainFrozen"
+            ]
+        },
+        "TrainProbe": {
+            "type": "object",
+            "properties": {
+                "index": {
+                    "description": "Index is the probed candidate's position, -1 for a run at the head.",
+                    "type": "integer"
+                },
+                "pipeline": {
+                    "type": "integer"
+                },
+                "result": {
+                    "description": "Result is empty while running, else \"success\", \"failure\" or\n\"inconclusive\".",
+                    "type": "string"
+                },
+                "sha": {
+                    "type": "string"
+                }
+            }
+        },
+        "TrainRevert": {
+            "type": "object",
+            "properties": {
+                "car": {
+                    "type": "string"
+                },
+                "commit": {
+                    "type": "string"
+                },
+                "created": {
+                    "type": "integer"
+                },
+                "pr": {
+                    "type": "integer"
+                },
+                "promote": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "workflows": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "TrainSettings": {
+            "type": "object",
+            "properties": {
+                "branch": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "freeze_protection": {
+                    "type": "boolean"
+                },
+                "ignore_base_failures": {
+                    "type": "boolean"
+                },
+                "max_bisect_parallel": {
+                    "type": "integer"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "TrainSettingsPatch": {
+            "type": "object",
+            "properties": {
+                "branch": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "freeze_protection": {
+                    "type": "boolean"
+                },
+                "ignore_base_failures": {
+                    "type": "boolean"
+                },
+                "max_bisect_parallel": {
+                    "type": "integer"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "TrainState": {
+            "type": "object",
+            "properties": {
+                "base": {
+                    "description": "Base is the target commit the current promote is compared against.",
+                    "type": "string"
+                },
+                "cars": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/TrainCar"
+                    }
+                },
+                "frozen": {
+                    "description": "Frozen is set while the train branch must not take new cars.",
+                    "type": "boolean"
+                },
+                "frozen_reason": {
+                    "type": "string"
+                },
+                "head": {
+                    "description": "Head is the train branch commit the current promote tests.",
+                    "type": "string"
+                },
+                "held_head": {
+                    "description": "HeldHead is the head the train held at, so it is not promoted again.",
+                    "type": "string"
+                },
+                "history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/TrainEvent"
+                    }
+                },
+                "investigations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/TrainInvestigation"
+                    }
+                },
+                "last_promote_pipeline": {
+                    "description": "LastPromotePipeline is the number of the last promote that moved the\ntarget.",
+                    "type": "integer"
+                },
+                "last_promoted": {
+                    "description": "LastPromoted is the last commit fast-forwarded onto the target.",
+                    "type": "string"
+                },
+                "last_result": {
+                    "type": "string"
+                },
+                "phase": {
+                    "$ref": "#/definitions/TrainPhase"
+                },
+                "pipeline": {
+                    "description": "Pipeline is the number of the current train promote.",
+                    "type": "integer"
+                },
+                "regressed": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "reverts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/TrainRevert"
+                    }
+                },
+                "updated": {
+                    "type": "integer"
+                }
+            }
+        },
+        "TrainStatus": {
+            "type": "object",
+            "properties": {
+                "has_bot_token": {
+                    "description": "HasBotToken tells whether the train writes with its own token.",
+                    "type": "boolean"
+                },
+                "settings": {
+                    "$ref": "#/definitions/TrainSettings"
+                },
+                "state": {
+                    "$ref": "#/definitions/TrainState"
+                }
+            }
+        },
         "User": {
             "type": "object",
             "properties": {
@@ -6287,7 +6780,8 @@ const docTemplate = `{
                 "release",
                 "deployment",
                 "cron",
-                "manual"
+                "manual",
+                "promote"
             ],
             "x-enum-varnames": [
                 "EventPush",
@@ -6298,7 +6792,8 @@ const docTemplate = `{
                 "EventRelease",
                 "EventDeploy",
                 "EventCron",
-                "EventManual"
+                "EventManual",
+                "EventPromote"
             ]
         },
         "WorkflowGroupRule": {
@@ -6441,7 +6936,8 @@ const docTemplate = `{
                 "release",
                 "deployment",
                 "cron",
-                "manual"
+                "manual",
+                "promote"
             ],
             "x-enum-varnames": [
                 "EventPush",
@@ -6452,7 +6948,8 @@ const docTemplate = `{
                 "EventRelease",
                 "EventDeploy",
                 "EventCron",
-                "EventManual"
+                "EventManual",
+                "EventPromote"
             ]
         },
         "metadata.Forge": {
@@ -6534,6 +7031,9 @@ const docTemplate = `{
                 "parent": {
                     "type": "integer"
                 },
+                "promote": {
+                    "$ref": "#/definitions/metadata.Promote"
+                },
                 "release": {
                     "$ref": "#/definitions/metadata.Release"
                 },
@@ -6550,6 +7050,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "task": {
+                    "type": "string"
+                }
+            }
+        },
+        "metadata.Promote": {
+            "type": "object",
+            "properties": {
+                "base": {
+                    "description": "Base is the target branch commit the promote is tested against.",
+                    "type": "string"
+                },
+                "cars": {
+                    "description": "Cars are the merge commits on the train branch under test.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "kind": {
+                    "description": "Kind is \"train\" for a promote of the train branch head and \"bisect\"\nfor a pipeline that narrows down a regression.",
                     "type": "string"
                 }
             }

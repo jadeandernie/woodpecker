@@ -31,6 +31,8 @@ var (
 	// ErrSyncConflict is returned when the target does not merge cleanly into
 	// the train branch.
 	ErrSyncConflict = errors.New("target does not merge cleanly into the train branch")
+	// ErrNothingToRevert is returned by Revert when the car changed no files.
+	ErrNothingToRevert = errors.New("car changes nothing to revert")
 )
 
 // TrainRevertTrailer is the commit message trailer a revert carries with the
@@ -82,8 +84,8 @@ type Train interface {
 	// Revert commits the reverse of car's changes against its first parent
 	// onto branch with the given title, and a TrainRevertTrailer naming the
 	// car. It returns the revert commit, the existing one if branch already
-	// carries a revert of car, or ErrRevertConflict if the changes do not
-	// reverse cleanly.
+	// carries a revert of car, ErrRevertConflict if the changes do not
+	// reverse cleanly, or ErrNothingToRevert if the car changed nothing.
 	Revert(ctx context.Context, u *model.User, r *model.Repo, branch string, car *model.TrainCar, title string) (string, error)
 
 	// Freeze stops (frozen) or allows pushes and merges to branch by anyone

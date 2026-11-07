@@ -53,13 +53,13 @@ func UpdateToStatusDeclined(store store.Store, pipeline model.Pipeline, reviewer
 	pipeline.Reviewer = reviewer
 	pipeline.Status = model.StatusDeclined
 	pipeline.Reviewed = time.Now().Unix()
-	return &pipeline, store.UpdatePipeline(&pipeline)
+	return ended(store, &pipeline)
 }
 
 func UpdateStatusToDone(store store.Store, pipeline model.Pipeline, status model.StatusValue, stopped int64) (*model.Pipeline, error) {
 	pipeline.Status = status
 	pipeline.Finished = stopped
-	return &pipeline, store.UpdatePipeline(&pipeline)
+	return ended(store, &pipeline)
 }
 
 func UpdateToStatusError(store store.Store, pipeline model.Pipeline, err error) (*model.Pipeline, error) {
@@ -67,12 +67,22 @@ func UpdateToStatusError(store store.Store, pipeline model.Pipeline, err error) 
 	pipeline.Status = model.StatusError
 	pipeline.Started = time.Now().Unix()
 	pipeline.Finished = pipeline.Started
-	return &pipeline, store.UpdatePipeline(&pipeline)
+	return ended(store, &pipeline)
 }
 
 func UpdateToStatusKilled(store store.Store, pipeline model.Pipeline, cancelInfo *model.CancelInfo, state model.StatusValue) (*model.Pipeline, error) {
 	pipeline.Status = state
 	pipeline.Finished = time.Now().Unix()
 	pipeline.CancelInfo = cancelInfo
-	return &pipeline, store.UpdatePipeline(&pipeline)
+	return ended(store, &pipeline)
+}
+
+// ended saves a pipeline that reached a final status and tells the promote
+// hooks about it.
+func ended(store store.Store, pipeline *model.Pipeline) (*model.Pipeline, error) {
+	if err := store.UpdatePipeline(pipeline); err != nil {
+		return pipeline, err
+	}
+	promoteDone(pipeline)
+	return pipeline, nil
 }

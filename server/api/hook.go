@@ -33,6 +33,7 @@ import (
 	"go.woodpecker-ci.org/woodpecker/v3/server/model"
 	"go.woodpecker-ci.org/woodpecker/v3/server/pipeline"
 	"go.woodpecker-ci.org/woodpecker/v3/server/store"
+	"go.woodpecker-ci.org/woodpecker/v3/server/train"
 	"go.woodpecker-ci.org/woodpecker/v3/shared/token"
 )
 
@@ -196,6 +197,13 @@ func PostHook(c *gin.Context) {
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// A push to the merge train's branch or target moves the train.
+	if pipelineFromForge.Event == model.EventPush {
+		if cfg := repo.TrainConfig(); cfg.Enabled && (pipelineFromForge.Branch == cfg.Branch || pipelineFromForge.Branch == cfg.Target) {
+			train.Kick(repo.ID)
+		}
 	}
 
 	//

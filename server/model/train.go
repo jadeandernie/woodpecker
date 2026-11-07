@@ -257,7 +257,8 @@ type TrainState struct {
 	HeldHead string `json:"held_head,omitempty" xorm:"varchar(250) 'held_head'"`
 	// LastPromoted is the last commit fast-forwarded onto the target.
 	LastPromoted string `json:"last_promoted,omitempty" xorm:"varchar(250) 'last_promoted'"`
-	// LastPromotePipeline is the number of the last promote of any result.
+	// LastPromotePipeline is the number of the last promote that moved the
+	// target.
 	LastPromotePipeline int64          `json:"last_promote_pipeline,omitempty" xorm:"'last_promote_pipeline'"`
 	LastResult          string         `json:"last_result,omitempty"           xorm:"TEXT 'last_result'"`
 	Reverts             []*TrainRevert `json:"reverts,omitempty"               xorm:"json 'reverts'"`
@@ -288,3 +289,11 @@ func (s *TrainState) Car(sha string) *TrainCar {
 	}
 	return nil
 }
+
+// TrainStatus is what the API shows of a repo's merge train.
+type TrainStatus struct {
+	Settings TrainSettings `json:"settings"`
+	// HasBotToken tells whether the train writes with its own token.
+	HasBotToken bool        `json:"has_bot_token"`
+	State       *TrainState `json:"state"`
+} //	@name	TrainStatus

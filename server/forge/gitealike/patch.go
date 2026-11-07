@@ -15,7 +15,6 @@
 package gitealike
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,7 +25,7 @@ import (
 // ErrNothingToRevert is returned by Revert when the car changed no files, so
 // there is nothing to take off the train branch. It is not a conflict: the
 // car cannot have broken anything.
-var ErrNothingToRevert = errors.New("car changes nothing to revert")
+var ErrNothingToRevert = forge.ErrNothingToRevert
 
 // errUnreversible wraps forge.ErrRevertConflict for patches git cannot apply
 // in reverse from text alone.
