@@ -1171,6 +1171,154 @@ func TestFifoConcurrency(t *testing.T) {
 	})
 }
 
+func TestFifoPipelineOrder(t *testing.T) {
+	t.Run("dependent workflow keeps its pipeline's place", func(t *testing.T) {
+		ctx, _, q := setupTestQueue(t)
+
+		// pipeline 1 builds, then deploys once the build is done.
+		build := &model.Task{ID: "1-build", Name: "build", PipelineID: 1, Created: 100}
+		deploy := &model.Task{
+			ID:           "1-deploy",
+			Name:         "deploy",
+			PipelineID:   1,
+			Created:      100,
+			Dependencies: []string{"1-build"},
+			DepStatus:    make(map[string]model.StatusValue),
+		}
+		// pipeline 2, created later, has several independent workflows.
+		var later []*model.Task
+		for i := range 3 {
+			later = append(later, &model.Task{
+				ID:         fmt.Sprintf("2-build-%d", i),
+				Name:       fmt.Sprintf("build-%d", i),
+				PipelineID: 2,
+				Created:    200,
+			})
+		}
+
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{build, deploy}))
+		assert.NoError(t, q.PushAtOnce(ctx, later))
+		waitForProcess()
+		assert.Equal(t, []string{"1-build", "2-build-0", "2-build-1", "2-build-2"}, pendingIDs(q.Info(ctx)))
+
+		got, err := q.Poll(ctx, 1, filterFnTrue)
+		assert.NoError(t, err)
+		assert.Equal(t, build, got)
+		assert.NoError(t, q.Done(ctx, got.ID, model.StatusSuccess))
+		waitForProcess()
+
+		// the deploy goes before pipeline 2's workflows, not behind them.
+		assert.Equal(t, []string{"1-deploy", "2-build-0", "2-build-1", "2-build-2"}, pendingIDs(q.Info(ctx)))
+
+		got, err = q.Poll(ctx, 1, filterFnTrue)
+		assert.NoError(t, err)
+		assert.Equal(t, deploy, got, "an earlier pipeline's deploy must not wait behind a later pipeline")
+		assert.NoError(t, q.Done(ctx, got.ID, model.StatusSuccess))
+	})
+
+	t.Run("workflows of one pipeline keep their order", func(t *testing.T) {
+		ctx, _, q := setupTestQueue(t)
+
+		// The names sort against the queued order on purpose: within a
+		// pipeline, workflows keep the order they were queued in, and one
+		// whose dependencies clear goes behind its pipeline's pending ones.
+		build := &model.Task{ID: "1-build", Name: "z-build", PipelineID: 1, Created: 100}
+		lint := &model.Task{ID: "1-lint", Name: "y-lint", PipelineID: 1, Created: 100}
+		deployB := &model.Task{
+			ID:           "1-deploy-b",
+			Name:         "b-deploy",
+			PipelineID:   1,
+			Created:      100,
+			Dependencies: []string{"1-build"},
+			DepStatus:    make(map[string]model.StatusValue),
+		}
+		deployA := &model.Task{
+			ID:           "1-deploy-a",
+			Name:         "a-deploy",
+			PipelineID:   1,
+			Created:      100,
+			Dependencies: []string{"1-build"},
+			DepStatus:    make(map[string]model.StatusValue),
+		}
+		other := &model.Task{ID: "2-build", Name: "build", PipelineID: 2, Created: 200}
+
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{build, lint, deployB, deployA}))
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{other}))
+		waitForProcess()
+		assert.Equal(t, []string{"1-build", "1-lint", "2-build"}, pendingIDs(q.Info(ctx)))
+
+		got, err := q.Poll(ctx, 1, filterFnTrue)
+		assert.NoError(t, err)
+		assert.Equal(t, build, got)
+		assert.NoError(t, q.Done(ctx, got.ID, model.StatusSuccess))
+		waitForProcess()
+
+		assert.Equal(t, []string{"1-lint", "1-deploy-b", "1-deploy-a", "2-build"}, pendingIDs(q.Info(ctx)))
+
+		// agents get them in that order.
+		for _, want := range []*model.Task{lint, deployB, deployA, other} {
+			got, err := q.Poll(ctx, 1, filterFnTrue)
+			assert.NoError(t, err)
+			assert.Equal(t, want, got)
+			assert.NoError(t, q.Done(ctx, got.ID, model.StatusSuccess))
+		}
+	})
+
+	t.Run("resubmitted workflows merge in by pipeline", func(t *testing.T) {
+		// no process loop, filterWaiting is driven directly.
+		q := &fifo{
+			workers:       map[*worker]struct{}{},
+			running:       map[string]*entry{},
+			pending:       list.New(),
+			waitingOnDeps: list.New(),
+		}
+		newTask := func(id string, pipelineID, created int64) *model.Task {
+			return &model.Task{ID: id, PipelineID: pipelineID, Created: created}
+		}
+
+		for _, task := range []*model.Task{
+			newTask("p1-a", 1, 100),
+			newTask("p2-a", 2, 200),
+			newTask("p2-b", 2, 200),
+			newTask("p4-a", 4, 400),
+		} {
+			q.pending.PushBack(task)
+		}
+		// waiting in no particular order; p5 was created in the same second
+		// as p4, so the pipeline ID puts it after p4.
+		for _, task := range []*model.Task{
+			newTask("p3-w", 3, 300),
+			newTask("p1-w1", 1, 100),
+			newTask("p5-w", 5, 400),
+			newTask("p2-w", 2, 200),
+			newTask("p1-w2", 1, 100),
+			newTask("p0-w", 0, 50),
+		} {
+			q.waitingOnDeps.PushBack(task)
+		}
+
+		q.filterWaiting()
+
+		assert.Equal(t, []string{
+			"p0-w",
+			"p1-a", "p1-w1", "p1-w2",
+			"p2-a", "p2-b", "p2-w",
+			"p3-w",
+			"p4-a",
+			"p5-w",
+		}, pendingIDs(q.Info(t.Context())))
+		assert.Zero(t, q.waitingOnDeps.Len())
+	})
+}
+
+func pendingIDs(info InfoT) []string {
+	ids := make([]string, 0, len(info.Pending))
+	for _, task := range info.Pending {
+		ids = append(ids, task.ID)
+	}
+	return ids
+}
+
 func TestFifoLeaseManagement(t *testing.T) {
 	ctx, cancel, q := setupTestQueue(t)
 	defer cancel(nil)
