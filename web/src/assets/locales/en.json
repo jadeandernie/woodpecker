@@ -221,6 +221,23 @@
           "subgroup": "Subgroup, e.g. $1",
           "add": "Add rule",
           "remove": "Remove rule"
+        },
+        "train": {
+          "train": "Merge train",
+          "enabled": "Promote the train branch",
+          "enabled_desc": "Test the train branch in a promote pipeline whenever it is ahead of the target, fast-forward the target to the exact tested commit when it is green, and revert the change that broke it when it is red.",
+          "branch": "Train branch",
+          "target": "Target branch",
+          "ignore_base_failures": "Ignore failures already on the target",
+          "ignore_base_failures_desc": "A workflow already red on the target's last promote or push pipeline does not stop a promote.",
+          "freeze_protection": "Lock the train branch while frozen",
+          "freeze_protection_desc": "Use branch protection to keep new merges off the train branch while the train is frozen or bisecting.",
+          "max_bisect_parallel": "Parallel bisect pipelines",
+          "bot_token": "Bot token",
+          "bot_token_set": "A bot token is set; leave empty to keep it",
+          "bot_token_unset": "Optional forge token the train writes with",
+          "bot_token_remove": "Remove bot token",
+          "desc": "Approved pull requests merge into the train branch; the train promotes it to the target. Without a bot token the train writes with the repository owner's forge token."
         }
       },
       "crons": {
@@ -336,7 +353,8 @@
         "deploy": "Deploy",
         "cron": "Cron",
         "manual": "Manual",
-        "release": "Release"
+        "release": "Release",
+        "promote": "Promote"
       },
       "status": {
         "status": "Status: {status}",
@@ -404,6 +422,76 @@
         "skipped_skipped": "Skipped: {name} was skipped",
         "after": "after {names}"
       }
+    },
+    "train": {
+      "title": "Merge train",
+      "off": "The merge train is off for this repository. Turn it on in the general settings to promote {branch} to {target} once its promote pipeline is green.",
+      "open_settings": "Open settings",
+      "load_error": "Could not load the merge train: {error}",
+      "reload": "Reload",
+      "status": "Status",
+      "phase": {
+        "idle": "Idle",
+        "promoting": "Promoting",
+        "investigating": "Investigating",
+        "held": "Held",
+        "frozen": "Frozen"
+      },
+      "phase_desc": {
+        "idle": "Waiting for {branch} to get ahead of {target}.",
+        "promoting": "Promote #{pipeline} tests {head}.",
+        "investigating": "Promote #{pipeline} is red; looking for the cars that broke it.",
+        "held": "Nothing to test at {head}; the next car starts a new promote.",
+        "frozen": "Stopped until someone resumes it."
+      },
+      "branch_locked": "{branch} is locked: {reason}",
+      "route": "Route",
+      "cars_waiting": "no cars waiting | 1 car waiting | {count} cars waiting",
+      "last_promote": "Last promote",
+      "last_promote_none": "Nothing promoted yet",
+      "last_promote_pipeline": "Promote #{pipeline}",
+      "resume": "Resume",
+      "resume_desc": "Unfreeze {branch} and drop the current investigations.",
+      "retry": "Promote again",
+      "retry_desc": "Start a fresh promote of the {branch} head.",
+      "resumed": "The merge train resumed",
+      "retried": "The merge train promotes again",
+      "cars": "Cars under test",
+      "cars_none": "No cars under test",
+      "files": "no files | 1 file | {count} files",
+      "mark": {
+        "reverted": "reverted",
+        "culprit": "culprit",
+        "suspect": "suspect"
+      },
+      "investigations": "Investigations",
+      "step": {
+        "recheck": "re-run",
+        "flake_check": "flake check",
+        "bisect": "bisecting",
+        "done": "done"
+      },
+      "outcome": {
+        "culprit": "culprit found",
+        "flake": "flaky",
+        "base_broken": "broken outside the cars",
+        "inconclusive": "inconclusive"
+      },
+      "suspects": "no suspects | 1 suspect left of {total} | {count} suspects left of {total}",
+      "probe": "#{pipeline} at {sha}",
+      "probe_head": "#{pipeline} at the head",
+      "probe_result": {
+        "running": "running",
+        "success": "green",
+        "failure": "red",
+        "inconclusive": "inconclusive"
+      },
+      "reverts": "Reverts",
+      "reverts_none": "Nothing reverted",
+      "revert_broke": "broke {workflows} in promote #{pipeline}",
+      "history": "History",
+      "history_none": "No history yet",
+      "updated": "Updated {time}"
     }
   },
   "org": {

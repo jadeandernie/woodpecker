@@ -10,5 +10,6 @@ export * from './registry';
 export * from './repo';
 export * from './secret';
 export * from './stats';
+export * from './train';
 export * from './user';
 export * from './webhook';

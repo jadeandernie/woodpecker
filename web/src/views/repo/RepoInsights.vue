@@ -276,6 +276,7 @@ const eventOptions = computed<SelectOption[]>(() => [
   { value: 'release', text: t('repo.pipeline.event.release') },
   { value: 'deployment', text: t('repo.pipeline.event.deploy') },
   { value: 'cron', text: t('repo.pipeline.event.cron') },
+  { value: 'promote', text: t('repo.pipeline.event.promote') },
   { value: 'manual', text: t('repo.pipeline.event.manual') },
 ]);
 

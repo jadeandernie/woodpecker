@@ -29,6 +29,7 @@
     <div class="flex min-w-0 grow flex-wrap px-4 py-2 md:flex-nowrap">
       <div class="hidden shrink-0 items-center md:flex">
         <Icon v-if="pipeline.event === 'cron'" name="stopwatch" class="text-wp-text-100" />
+        <Icon v-else-if="pipeline.event === 'promote'" name="train" class="text-wp-text-100" />
         <img v-else class="w-6 rounded-md" :src="pipeline.author_avatar" />
       </div>
 
@@ -64,6 +65,7 @@
             <Icon v-else-if="pipeline.event === 'tag' || pipeline.event === 'release'" name="tag" />
             <Icon v-else-if="pipeline.event === 'cron'" name="branch" />
             <Icon v-else-if="pipeline.event === 'manual'" name="manual-pipeline" />
+            <Icon v-else-if="pipeline.event === 'promote'" name="train" />
             <Icon v-else name="branch" />
           </span>
           <span class="truncate">{{ prettyRef }}</span>
@@ -138,6 +140,8 @@ const pipelineEventTitle = computed(() => {
       return t('repo.pipeline.event.cron');
     case 'manual':
       return t('repo.pipeline.event.manual');
+    case 'promote':
+      return t('repo.pipeline.event.promote');
     default:
       return t('repo.pipeline.event.push');
   }

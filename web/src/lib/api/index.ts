@@ -18,6 +18,7 @@ import type {
   RepoSettings,
   RepoStats,
   Secret,
+  TrainStatus,
   User,
   WorkflowInfo,
 } from './types';
@@ -130,12 +131,24 @@ export default class WoodpeckerClient extends ApiClient {
   }
 
   // the pipeline history of a repo with each workflow's group, timing and memory, for the insights views
-  async getRepoStats(
-    repoId: number,
-    opts?: { branch?: string; event?: string; limit?: number },
-  ): Promise<RepoStats> {
+  async getRepoStats(repoId: number, opts?: { branch?: string; event?: string; limit?: number }): Promise<RepoStats> {
     const query = encodeQueryString(opts);
     return this._get(`/api/repos/${repoId}/stats?${query}`) as Promise<RepoStats>;
+  }
+
+  // the merge train's settings and state
+  async getTrain(repoId: number): Promise<TrainStatus> {
+    return this._get(`/api/repos/${repoId}/train`) as Promise<TrainStatus>;
+  }
+
+  // unfreeze the merge train and let it promote again
+  async resumeTrain(repoId: number): Promise<TrainStatus> {
+    return this._post(`/api/repos/${repoId}/train/resume`) as Promise<TrainStatus>;
+  }
+
+  // promote the train branch head again
+  async retryTrain(repoId: number): Promise<TrainStatus> {
+    return this._post(`/api/repos/${repoId}/train/retry`) as Promise<TrainStatus>;
   }
 
   async getPipeline(repoId: number, pipelineNumber: number | 'latest'): Promise<Pipeline> {

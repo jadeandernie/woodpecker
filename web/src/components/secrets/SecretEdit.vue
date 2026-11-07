@@ -100,6 +100,7 @@ const secretEventsOptions: CheckboxOption[] = [
   { value: WebhookEvents.Deploy, text: i18n.t('repo.pipeline.event.deploy') },
   { value: WebhookEvents.Cron, text: i18n.t('repo.pipeline.event.cron') },
   { value: WebhookEvents.Manual, text: i18n.t('repo.pipeline.event.manual') },
+  { value: WebhookEvents.Promote, text: i18n.t('repo.pipeline.event.promote') },
 ];
 
 function save() {

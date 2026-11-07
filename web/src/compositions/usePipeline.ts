@@ -83,7 +83,11 @@ export default (pipeline: Ref<Pipeline | undefined>) => {
   const prTitle = computed(() => prTitleWithDescription.value.split('\n')[0]);
 
   const prettyRef = computed(() => {
-    if (pipeline.value?.event === 'push' || pipeline.value?.event === 'deployment') {
+    if (
+      pipeline.value?.event === 'push' ||
+      pipeline.value?.event === 'deployment' ||
+      pipeline.value?.event === 'promote'
+    ) {
       return pipeline.value.branch;
     }
 

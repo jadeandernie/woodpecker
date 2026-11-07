@@ -54,6 +54,12 @@ const routes: RouteRecordRaw[] = [
             meta: { repoHeader: true },
           },
           {
+            path: 'train',
+            name: 'repo-train',
+            component: (): Component => import('~/views/repo/RepoTrain.vue'),
+            meta: { repoHeader: true },
+          },
+          {
             path: 'branches',
             meta: { repoHeader: true },
             children: [

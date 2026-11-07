@@ -23,6 +23,8 @@
   <SvgIcon v-else-if="name === 'console'" :path="mdiConsole" size="1.3rem" />
   <SvgIcon v-else-if="name === 'graph'" :path="mdiSitemapOutline" size="1.3rem" />
   <SvgIcon v-else-if="name === 'insights'" :path="mdiChartBar" size="1.3rem" />
+  <SvgIcon v-else-if="name === 'train'" :path="mdiTrain" size="1.3rem" />
+  <SvgIcon v-else-if="name === 'frozen'" :path="mdiSnowflake" size="1.3rem" />
   <SvgIcon v-else-if="name === 'agent'" :path="mdiPlayNetworkOutline" size="1.3rem" />
   <SvgIcon v-else-if="name === 'info'" :path="mdiInformationSlabCircleOutline" size="1.3rem" />
   <SvgIcon v-else-if="name === 'user'" :path="mdiAccountOutline" size="1.3rem" />
@@ -114,6 +116,8 @@
 import {
   mdiAccountGroupOutline,
   mdiChartBar,
+  mdiTrain,
+  mdiSnowflake,
   mdiSitemapOutline,
   mdiAccountOutline,
   mdiAlarm,
@@ -190,6 +194,8 @@ export type IconNames =
   | 'duration'
   | 'graph'
   | 'insights'
+  | 'train'
+  | 'frozen'
   | 'since'
   | 'branch'
   | 'pull-request'

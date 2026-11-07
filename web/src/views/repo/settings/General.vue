@@ -204,6 +204,67 @@
         </template>
       </InputField>
 
+      <InputField v-if="repoSettings.train" :label="$t('repo.settings.general.train.train')">
+        <Checkbox
+          v-model="repoSettings.train.enabled"
+          :label="$t('repo.settings.general.train.enabled')"
+          :description="$t('repo.settings.general.train.enabled_desc')"
+        />
+        <template v-if="repoSettings.train.enabled">
+          <div class="flex flex-col gap-2 md:flex-row">
+            <label class="flex flex-1 flex-col gap-1 text-sm">
+              {{ $t('repo.settings.general.train.branch') }}
+              <TextField v-model="repoSettings.train.branch" />
+            </label>
+            <label class="flex flex-1 flex-col gap-1 text-sm">
+              {{ $t('repo.settings.general.train.target') }}
+              <TextField v-model="repoSettings.train.target" />
+            </label>
+            <label class="flex flex-1 flex-col gap-1 text-sm">
+              {{ $t('repo.settings.general.train.max_bisect_parallel') }}
+              <NumberField v-model="repoSettings.train.max_bisect_parallel" />
+            </label>
+          </div>
+          <Checkbox
+            v-model="repoSettings.train.ignore_base_failures"
+            :label="$t('repo.settings.general.train.ignore_base_failures')"
+            :description="$t('repo.settings.general.train.ignore_base_failures_desc')"
+          />
+          <Checkbox
+            v-model="repoSettings.train.freeze_protection"
+            :label="$t('repo.settings.general.train.freeze_protection')"
+            :description="$t('repo.settings.general.train.freeze_protection_desc')"
+          />
+          <label class="flex flex-col gap-1 text-sm">
+            {{ $t('repo.settings.general.train.bot_token') }}
+            <div class="flex gap-2">
+              <TextField
+                v-model="trainBotToken"
+                type="password"
+                :disabled="removeTrainBotToken"
+                :placeholder="
+                  hasTrainBotToken
+                    ? $t('repo.settings.general.train.bot_token_set')
+                    : $t('repo.settings.general.train.bot_token_unset')
+                "
+              />
+              <Button
+                v-if="hasTrainBotToken"
+                type="button"
+                color="gray"
+                start-icon="trash"
+                :title="$t('repo.settings.general.train.bot_token_remove')"
+                :disabled="removeTrainBotToken"
+                @click="removeTrainBotToken = true"
+              />
+            </div>
+          </label>
+        </template>
+        <template #description>
+          {{ $t('repo.settings.general.train.desc') }}
+        </template>
+      </InputField>
+
       <Button
         type="submit"
         class="mr-auto"
@@ -237,7 +298,7 @@ import { requiredInject } from '~/compositions/useInjectProvide';
 import useNotifications from '~/compositions/useNotifications';
 import { useWPTitle } from '~/compositions/useWPTitle';
 import { RepoRequireApproval, RepoVisibility, WebhookEvents } from '~/lib/api/types';
-import type { RepoSettings } from '~/lib/api/types';
+import type { RepoSettings, TrainSettings } from '~/lib/api/types';
 import { useRepoStore } from '~/store/repos';
 
 const apiClient = useApiClient();
@@ -249,6 +310,30 @@ const { defaultConfigPaths } = useConfig();
 
 const repo = requiredInject('repo');
 const repoSettings = ref<RepoSettings>();
+
+// the train's own forge token is write-only: the server only says whether one is set
+const hasTrainBotToken = ref(false);
+const trainBotToken = ref('');
+const removeTrainBotToken = ref(false);
+
+const defaultTrainSettings: TrainSettings = {
+  enabled: false,
+  branch: 'dev',
+  target: 'main',
+  ignore_base_failures: true,
+  max_bisect_parallel: 2,
+  freeze_protection: true,
+};
+
+async function loadTrainBotToken() {
+  try {
+    hasTrainBotToken.value = (await apiClient.getTrain(repo.value.id)).has_bot_token;
+  } catch {
+    hasTrainBotToken.value = false;
+  }
+  trainBotToken.value = '';
+  removeTrainBotToken.value = false;
+}
 
 const netrcTrustedEditor = useTemplateRef<InstanceType<typeof ListEditor>>('netrcTrustedEditor');
 const approvalAllowedUsersEditor = useTemplateRef<InstanceType<typeof ListEditor>>('approvalAllowedUsersEditor');
@@ -268,6 +353,7 @@ function loadRepoSettings() {
     cancel_previous_pipeline_squash: repo.value.cancel_previous_pipeline_squash,
     netrc_trusted: repo.value.netrc_trusted || [],
     workflow_groups: (repo.value.workflow_groups ?? []).map((rule) => ({ ...rule })),
+    train: { ...defaultTrainSettings, ...repo.value.train },
   };
 }
 
@@ -290,13 +376,21 @@ const { doSubmit: saveRepoSettings, isLoading: isSaving } = useAsyncAction(async
     .map((rule) => ({ pattern: rule.pattern.trim(), group: rule.group.trim(), subgroup: rule.subgroup?.trim() ?? '' }))
     .filter((rule) => rule.pattern !== '');
 
-  await apiClient.updateRepo(repo.value.id, { ...repoSettings.value, workflow_groups: workflowGroups });
-  await loadRepo();
+  const settings: Partial<RepoSettings> = { ...repoSettings.value, workflow_groups: workflowGroups };
+  if (removeTrainBotToken.value) {
+    settings.train_bot_token = '';
+  } else if (trainBotToken.value.trim() !== '') {
+    settings.train_bot_token = trainBotToken.value.trim();
+  }
+
+  await apiClient.updateRepo(repo.value.id, settings);
+  await Promise.all([loadRepo(), loadTrainBotToken()]);
   notifications.notify({ title: i18n.t('repo.settings.general.success'), type: 'success' });
 });
 
-onMounted(() => {
+onMounted(async () => {
   loadRepoSettings();
+  await loadTrainBotToken();
 });
 
 const projectVisibilityOptions: RadioOption[] = [
@@ -325,6 +419,7 @@ const cancelPreviousPipelineEventsOptions: CheckboxOption[] = [
     text: i18n.t('repo.pipeline.event.pr'),
   },
   { value: WebhookEvents.Deploy, text: i18n.t('repo.pipeline.event.deploy') },
+  { value: WebhookEvents.Promote, text: i18n.t('repo.pipeline.event.promote') },
 ];
 
 useWPTitle(computed(() => [i18n.t('repo.settings.general.project'), repo.value.full_name]));

@@ -166,6 +166,7 @@ const badgeEventsOptions: CheckboxOption[] = [
   { value: WebhookEvents.Deploy, text: t('repo.pipeline.event.deploy') },
   { value: WebhookEvents.Cron, text: t('repo.pipeline.event.cron') },
   { value: WebhookEvents.Manual, text: t('repo.pipeline.event.manual') },
+  { value: WebhookEvents.Promote, text: t('repo.pipeline.event.promote') },
 ];
 
 useWPTitle(computed(() => [t('repo.settings.badge.badge'), repo.value.full_name]));

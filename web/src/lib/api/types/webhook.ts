@@ -9,5 +9,6 @@ export enum WebhookEvents {
   Deploy = 'deployment',
   Cron = 'cron',
   Manual = 'manual',
+  Promote = 'promote',
 }
 /* eslint-enable */

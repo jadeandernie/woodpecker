@@ -6,6 +6,7 @@
       <div class="flex shrink-0 items-center space-x-1">
         <div class="flex items-center">
           <Icon v-if="pipeline.event === 'cron'" name="stopwatch" />
+          <Icon v-else-if="pipeline.event === 'promote'" name="train" />
           <img v-else class="w-6 rounded-md" :src="pipeline.author_avatar" />
         </div>
         <span>{{ pipeline.author }}</span>

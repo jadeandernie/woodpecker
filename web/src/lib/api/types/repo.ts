@@ -1,5 +1,6 @@
 import type { Pipeline } from './pipeline';
 import type { WorkflowGroupRule } from './stats';
+import type { TrainSettings } from './train';
 
 // A version control repository.
 export interface Repo {
@@ -88,6 +89,9 @@ export interface Repo {
   // Only cancel previous pipelines that have not started yet and run their changed files in the new one
   cancel_previous_pipeline_squash: boolean;
 
+  // the merge train; absent means the defaults with the train off
+  train?: TrainSettings;
+
   netrc_trusted: string[];
 
   // Endpoint for config extensions
@@ -147,7 +151,11 @@ export type RepoSettings = Pick<
   | 'workflow_groups'
   | 'cancel_previous_pipeline_squash'
   | 'netrc_trusted'
->;
+  | 'train'
+> & {
+  // write-only: an empty string removes the train's own forge token
+  train_bot_token?: string;
+};
 
 export type ExtensionSettings = Pick<
   Repo,
