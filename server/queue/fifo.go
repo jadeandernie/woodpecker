@@ -15,6 +15,7 @@
 package queue
 
 import (
+	"cmp"
 	"container/list"
 	"context"
 	"errors"
@@ -288,10 +289,7 @@ func (q *fifo) process() {
 
 func (q *fifo) filterWaiting() {
 	// resubmits all waiting tasks to pending, deps may have cleared
-	for element := q.waitingOnDeps.Front(); element != nil; element = element.Next() {
-		task, _ := element.Value.(*model.Task)
-		q.pending.PushBack(task)
-	}
+	q.resubmitWaiting()
 
 	// rebuild waitingDeps
 	q.waitingOnDeps = list.New()
@@ -309,6 +307,58 @@ func (q *fifo) filterWaiting() {
 	for _, f := range filtered {
 		q.pending.Remove(f)
 	}
+}
+
+// resubmitWaiting moves every task waiting on dependencies back to pending at
+// its pipeline's place: before the first pending task of a later pipeline,
+// instead of at the back behind every pipeline created since. Otherwise a
+// workflow whose dependencies clear (e.g. a deploy after its build) waits for
+// all later pipelines' workflows. Tasks of the same pipeline keep the order
+// they were queued in, behind the ones already pending.
+//
+// The waiting tasks are sorted first, so a single walk over pending places
+// them all.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) resubmitWaiting() {
+	if q.waitingOnDeps.Len() == 0 {
+		return
+	}
+
+	waiting := make([]*model.Task, 0, q.waitingOnDeps.Len())
+	for element := q.waitingOnDeps.Front(); element != nil; element = element.Next() {
+		task, _ := element.Value.(*model.Task)
+		waiting = append(waiting, task)
+	}
+	slices.SortStableFunc(waiting, comparePipelineOrder)
+
+	// A later waiting task never goes before an earlier one's place, so the
+	// walk carries on from where the previous task was inserted.
+	next := q.pending.Front()
+	for _, task := range waiting {
+		for next != nil {
+			pending, _ := next.Value.(*model.Task)
+			if comparePipelineOrder(task, pending) < 0 {
+				break
+			}
+			next = next.Next()
+		}
+		if next == nil {
+			q.pending.PushBack(task)
+		} else {
+			q.pending.InsertBefore(task, next)
+		}
+	}
+}
+
+// comparePipelineOrder orders tasks by the creation of their pipeline: by the
+// Created timestamp, with the pipeline ID as tiebreaker for pipelines created
+// within the same second. Tasks of the same pipeline compare equal.
+func comparePipelineOrder(a, b *model.Task) int {
+	return cmp.Or(
+		cmp.Compare(a.Created, b.Created),
+		cmp.Compare(a.PipelineID, b.PipelineID),
+	)
 }
 
 func (q *fifo) assignToWorker() (*list.Element, *worker) {
