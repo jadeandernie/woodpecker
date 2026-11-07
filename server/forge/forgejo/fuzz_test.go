@@ -38,7 +38,7 @@ func FuzzParseHooks(f *testing.F) {
 	}
 
 	f.Fuzz(func(_ *testing.T, data []byte) {
-		_, _, _ = parsePushHook(bytes.NewReader(data))
+		_, _, _, _ = parsePushHook(bytes.NewReader(data))
 		_, _, _ = parseCreatedHook(bytes.NewReader(data))
 		_, _, _ = parsePullRequestHook(bytes.NewReader(data))
 		_, _, _ = parseReleaseHook(bytes.NewReader(data))

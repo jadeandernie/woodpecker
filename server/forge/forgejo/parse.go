@@ -70,46 +70,51 @@ func supportedAction(action string) bool {
 
 // parseHook parses a Forgejo hook from an http.Request and returns
 // Repo and Pipeline detail. If a hook type is unsupported nil values are returned.
-func parseHook(r *http.Request) (*model.Repo, *model.Pipeline, error) {
+// For branch push events the parsed push hook is returned as well, so the
+// caller can look up the pushed commit range.
+func parseHook(r *http.Request) (*model.Repo, *model.Pipeline, *pushHook, error) {
 	hookType := r.Header.Get(hookEvent)
 	switch hookType {
 	case hookPush:
 		return parsePushHook(r.Body)
 	case hookCreated:
-		return parseCreatedHook(r.Body)
+		repo, pipeline, err := parseCreatedHook(r.Body)
+		return repo, pipeline, nil, err
 	case hookPullRequest:
-		return parsePullRequestHook(r.Body)
+		repo, pipeline, err := parsePullRequestHook(r.Body)
+		return repo, pipeline, nil, err
 	case hookRelease:
-		return parseReleaseHook(r.Body)
+		repo, pipeline, err := parseReleaseHook(r.Body)
+		return repo, pipeline, nil, err
 	}
 	log.Debug().Msgf("unsupported hook type: '%s'", hookType)
-	return nil, nil, &types.ErrIgnoreEvent{Event: hookType}
+	return nil, nil, nil, &types.ErrIgnoreEvent{Event: hookType}
 }
 
-// parsePushHook parses a push hook and returns the Repo and Pipeline details.
-// If the commit type is unsupported nil values are returned.
-func parsePushHook(payload io.Reader) (repo *model.Repo, pipeline *model.Pipeline, err error) {
-	push, err := parsePush(payload)
+// parsePushHook parses a push hook and returns the Repo and Pipeline details
+// together with the parsed hook. If the commit type is unsupported nil values are returned.
+func parsePushHook(payload io.Reader) (repo *model.Repo, pipeline *model.Pipeline, push *pushHook, err error) {
+	push, err = parsePush(payload)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if err := push.validate(); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// ignore push events for tags
 	if strings.HasPrefix(push.Ref, "refs/tags/") {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	// TODO is this even needed?
 	if push.RefType == refBranch {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	repo = toRepo(push.Repo)
 	pipeline = pipelineFromPush(push)
-	return repo, pipeline, err
+	return repo, pipeline, push, err
 }
 
 // parseCreatedHook parses a push hook and returns the Repo and Pipeline details.

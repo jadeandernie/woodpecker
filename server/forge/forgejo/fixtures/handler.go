@@ -15,7 +15,10 @@
 package fixtures
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -35,6 +38,7 @@ func Handler() http.Handler {
 	e.POST("/api/v1/repos/:owner/:name/statuses/:commit", createRepoCommitStatus)
 	e.GET("/api/v1/repos/:owner/:name/pulls", listRepoPulls)
 	e.GET("/api/v1/repos/:owner/:name/pulls/:index/files", getPRFiles)
+	e.GET("/api/v1/repos/:owner/:name/git/commits/:sha", getCommit)
 	e.GET("/api/v1/user/repos", getUserRepos)
 	e.GET("/api/v1/version", getVersion)
 
@@ -136,6 +140,61 @@ func getPRFiles(c *gin.Context) {
 	} else {
 		c.String(http.StatusOK, "[]")
 	}
+}
+
+// fakeCommit is a commit of the fake commit graph served by getCommit.
+type fakeCommit struct {
+	parents []string
+	files   []string
+}
+
+// fakeCommits is a commit graph where a pull request branch merged main into
+// itself before being merged into main:
+//
+//	main:    base --- main1 ------------------------ prMerge
+//	           \          \                         /
+//	feature:    feature1 --- mergeMainIntoFeature --- feature2
+//
+// The first-parent diff of mergeMainIntoFeature contains what main1 changed,
+// the first-parent diff of prMerge contains what the pull request changed.
+// It also holds the parent of the HookPush fixture's commit.
+var fakeCommits = map[string]fakeCommit{
+	"base":                 {files: []string{"README.md"}},
+	"main1":                {parents: []string{"base"}, files: []string{"other/main.go"}},
+	"feature1":             {parents: []string{"base"}, files: []string{"service/a.go"}},
+	"mergeMainIntoFeature": {parents: []string{"feature1", "main1"}, files: []string{"other/main.go"}},
+	"feature2":             {parents: []string{"mergeMainIntoFeature"}, files: []string{"service/b.go"}},
+	"prMerge":              {parents: []string{"main1", "feature2"}, files: []string{"service/a.go", "service/b.go"}},
+	"main2":                {parents: []string{"prMerge"}, files: []string{"service/a.go", "docs/c.md"}},
+
+	"ef98532add3b2feb7a137426bba1248724367df5": {
+		parents: []string{"4b2626259b5a97b6b4eab5e6cca66adb986b672b"},
+		files:   []string{"CHANGELOG.md"},
+	},
+}
+
+// getCommit serves the commits of fakeCommits, and a linear chain of commits
+// "chain<N>" whose parent is "chain<N-1>".
+func getCommit(c *gin.Context) {
+	sha := c.Param("sha")
+	commit, ok := fakeCommits[sha]
+	if n, err := strconv.Atoi(strings.TrimPrefix(sha, "chain")); err == nil && n > 0 {
+		commit, ok = fakeCommit{parents: []string{fmt.Sprintf("chain%d", n-1)}, files: []string{fmt.Sprintf("file%d", n)}}, true
+	}
+	if !ok {
+		c.String(http.StatusNotFound, "")
+		return
+	}
+
+	parents := make([]gin.H, 0, len(commit.parents))
+	for _, parent := range commit.parents {
+		parents = append(parents, gin.H{"sha": parent})
+	}
+	files := make([]gin.H, 0, len(commit.files))
+	for _, file := range commit.files {
+		files = append(files, gin.H{"filename": file})
+	}
+	c.JSON(http.StatusOK, gin.H{"sha": sha, "parents": parents, "files": files})
 }
 
 func listRepoPulls(c *gin.Context) {

@@ -767,7 +767,7 @@ func TestForgejoParser(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodPost, "/api/hook", bytes.NewBufferString(tt.data))
 			req.Header = http.Header{}
 			req.Header.Set(hookEvent, tt.event)
-			r, p, err := parseHook(req)
+			r, p, _, err := parseHook(req)
 			if tt.err != nil {
 				assert.ErrorIs(t, err, tt.err)
 			} else if assert.NoError(t, err) {
@@ -788,7 +788,7 @@ func TestParseIncompleteHookPayloads(t *testing.T) {
 	for _, payload := range incomplete {
 		t.Run(payload, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				_, _, err := parsePushHook(bytes.NewBufferString(payload))
+				_, _, _, err := parsePushHook(bytes.NewBufferString(payload))
 				assert.Error(t, err)
 				_, _, err = parseCreatedHook(bytes.NewBufferString(payload))
 				assert.Error(t, err)
