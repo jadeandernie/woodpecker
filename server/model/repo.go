@@ -70,6 +70,7 @@ type Repo struct {
 	Config                       string               `json:"config_file"                     xorm:"varchar(500) 'config_path'"`
 	Hash                         string               `json:"-"                               xorm:"varchar(500) 'hash'"`
 	CancelPreviousPipelineEvents []WebhookEvent       `json:"cancel_previous_pipeline_events" xorm:"json 'cancel_previous_pipeline_events'"`
+	CancelPreviousPipelineSquash bool                 `json:"cancel_previous_pipeline_squash" xorm:"DEFAULT FALSE 'cancel_previous_pipeline_squash'"`
 	NetrcTrustedPlugins          []string             `json:"netrc_trusted"                   xorm:"json 'netrc_trusted'"`
 	ConfigExtensionEndpoint      string               `json:"config_extension_endpoint"       xorm:"varchar(500) 'config_extension_endpoint'"`
 	ConfigExtensionExclusive     bool                 `json:"config_extension_exclusive"      xorm:"DEFAULT FALSE 'config_extension_exclusive'"`
@@ -160,6 +161,7 @@ type RepoPatch struct {
 	AllowPull                    *bool                      `json:"allow_pr,omitempty"`
 	AllowDeploy                  *bool                      `json:"allow_deploy,omitempty"`
 	CancelPreviousPipelineEvents *[]WebhookEvent            `json:"cancel_previous_pipeline_events"`
+	CancelPreviousPipelineSquash *bool                      `json:"cancel_previous_pipeline_squash,omitempty"`
 	NetrcTrusted                 *[]string                  `json:"netrc_trusted"`
 	Trusted                      *TrustedConfigurationPatch `json:"trusted"`
 	ConfigExtensionEndpoint      *string                    `json:"config_extension_endpoint,omitempty"`

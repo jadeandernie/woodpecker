@@ -57,6 +57,11 @@ func Approve(ctx context.Context, store store.Store, currentPipeline *model.Pipe
 	// must already be pending when the new workflows are persisted.
 	currentPipeline.Status = model.StatusPending
 
+	// a gated pipeline squashes the pending pipelines it supersedes only now
+	// that it is released, so take over their changed files before building
+	// the workflows
+	superseded := squashPreviousPipelines(store, repo, currentPipeline)
+
 	currentPipeline, pipelineItems, parseErr, err := createPipelineItems(ctx, forge, store, currentPipeline, user, repo, yamls, nil, true)
 	if handleParseErrors(currentPipeline, parseErr) {
 		if err := updatePipelineWithErr(ctx, forge, store, currentPipeline, repo, user, parseErr); err != nil {
@@ -77,7 +82,7 @@ func Approve(ctx context.Context, store store.Store, currentPipeline *model.Pipe
 
 	publishPipeline(ctx, forge, currentPipeline, repo, user)
 
-	currentPipeline, err = start(ctx, forge, store, currentPipeline, user, repo, pipelineItems)
+	currentPipeline, err = start(ctx, forge, store, currentPipeline, user, repo, pipelineItems, superseded)
 	if err != nil {
 		msg := fmt.Sprintf("failure to start pipeline for %s: %v", repo.FullName, err)
 		log.Error().Err(err).Msg(msg)
