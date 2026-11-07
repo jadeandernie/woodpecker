@@ -165,6 +165,45 @@
         </template>
       </InputField>
 
+      <InputField :label="$t('repo.settings.general.workflow_groups.workflow_groups')">
+        <div class="flex flex-col gap-2">
+          <div
+            v-for="(rule, index) in repoSettings.workflow_groups"
+            :key="index"
+            class="flex flex-col gap-2 md:flex-row"
+          >
+            <TextField
+              v-model="rule.pattern"
+              class="md:flex-2"
+              :placeholder="$t('repo.settings.general.workflow_groups.pattern')"
+            />
+            <TextField v-model="rule.group" :placeholder="$t('repo.settings.general.workflow_groups.group')" />
+            <div class="flex gap-2">
+              <TextField v-model="rule.subgroup" :placeholder="$t('repo.settings.general.workflow_groups.subgroup')" />
+              <Button
+                type="button"
+                color="gray"
+                start-icon="trash"
+                :title="$t('repo.settings.general.workflow_groups.remove')"
+                @click="repoSettings.workflow_groups?.splice(index, 1)"
+              />
+            </div>
+          </div>
+          <Button
+            type="button"
+            color="gray"
+            start-icon="plus"
+            class="mr-auto"
+            :text="$t('repo.settings.general.workflow_groups.add')"
+            @click="repoSettings.workflow_groups?.push({ pattern: '', group: '', subgroup: '' })"
+          />
+        </div>
+        <template #description>
+          <p>{{ $t('repo.settings.general.workflow_groups.desc', { example: '$1 / ${name}' }) }}</p>
+          <p>{{ $t('repo.settings.general.workflow_groups.builtin') }}</p>
+        </template>
+      </InputField>
+
       <Button
         type="submit"
         class="mr-auto"
@@ -228,6 +267,7 @@ function loadRepoSettings() {
     cancel_previous_pipeline_keep_running: repo.value.cancel_previous_pipeline_keep_running,
     cancel_previous_pipeline_squash: repo.value.cancel_previous_pipeline_squash,
     netrc_trusted: repo.value.netrc_trusted || [],
+    workflow_groups: (repo.value.workflow_groups ?? []).map((rule) => ({ ...rule })),
   };
 }
 
@@ -245,7 +285,12 @@ const { doSubmit: saveRepoSettings, isLoading: isSaving } = useAsyncAction(async
   netrcTrustedEditor.value?.commitPendingItem();
   approvalAllowedUsersEditor.value?.commitPendingItem();
 
-  await apiClient.updateRepo(repo.value.id, repoSettings.value);
+  // rows without a pattern match nothing, drop them instead of saving them
+  const workflowGroups = (repoSettings.value.workflow_groups ?? [])
+    .map((rule) => ({ pattern: rule.pattern.trim(), group: rule.group.trim(), subgroup: rule.subgroup?.trim() ?? '' }))
+    .filter((rule) => rule.pattern !== '');
+
+  await apiClient.updateRepo(repo.value.id, { ...repoSettings.value, workflow_groups: workflowGroups });
   await loadRepo();
   notifications.notify({ title: i18n.t('repo.settings.general.success'), type: 'success' });
 });
