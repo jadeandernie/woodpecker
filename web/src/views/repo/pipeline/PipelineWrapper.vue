@@ -106,7 +106,7 @@
     </template>
 
     <Tab icon="tray-full" :to="{ name: 'repo-pipeline' }" :title="$t('repo.pipeline.tasks')" />
-    <Tab icon="agent" :to="{ name: 'repo-pipeline-graph' }" :title="$t('repo.pipeline.graph.title')" />
+    <Tab icon="graph" :to="{ name: 'repo-pipeline-graph' }" :title="$t('repo.pipeline.graph.title')" />
     <Tab
       v-if="errorsTabCount > 0"
       :to="{ name: 'repo-pipeline-errors' }"

@@ -21,6 +21,8 @@
   <SvgIcon v-else-if="name === 'list-group'" :path="mdiFormatListGroup" size="1.3rem" />
   <SvgIcon v-else-if="name === 'secret'" :path="mdiShieldKeyOutline" size="1.3rem" />
   <SvgIcon v-else-if="name === 'console'" :path="mdiConsole" size="1.3rem" />
+  <SvgIcon v-else-if="name === 'graph'" :path="mdiSitemapOutline" size="1.3rem" />
+  <SvgIcon v-else-if="name === 'insights'" :path="mdiChartBar" size="1.3rem" />
   <SvgIcon v-else-if="name === 'agent'" :path="mdiPlayNetworkOutline" size="1.3rem" />
   <SvgIcon v-else-if="name === 'info'" :path="mdiInformationSlabCircleOutline" size="1.3rem" />
   <SvgIcon v-else-if="name === 'user'" :path="mdiAccountOutline" size="1.3rem" />
@@ -111,6 +113,8 @@
 <script lang="ts" setup>
 import {
   mdiAccountGroupOutline,
+  mdiChartBar,
+  mdiSitemapOutline,
   mdiAccountOutline,
   mdiAlarm,
   mdiAlertCircle,
@@ -184,6 +188,8 @@ import SvgIcon from './SvgIcon.vue';
 
 export type IconNames =
   | 'duration'
+  | 'graph'
+  | 'insights'
   | 'since'
   | 'branch'
   | 'pull-request'

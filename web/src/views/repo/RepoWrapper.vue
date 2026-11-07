@@ -55,7 +55,7 @@
       match-children
       :title="$t('repo.pull_requests')"
     />
-    <Tab icon="duration" :to="{ name: 'repo-insights' }" :title="$t('repo.insights.title')" />
+    <Tab icon="insights" :to="{ name: 'repo-insights' }" :title="$t('repo.insights.title')" />
 
     <Warning v-if="permSyncFailed" class="mb-4 text-sm" :text="$t('repo.perm_sync_failed')" />
     <router-view />
