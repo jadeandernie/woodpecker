@@ -73,6 +73,14 @@ func Create(ctx context.Context, _store store.Store, repo *model.Repo, pipeline 
 		return nil, msg
 	}
 
+	// When the repo squashes pending pipelines, take over the changed files of
+	// the ones this pipeline supersedes before the config service and the path
+	// filters see them. A gated pipeline does so only once it is approved.
+	var superseded []*model.Pipeline
+	if pipeline.Status != model.StatusBlocked {
+		superseded = squashPreviousPipelines(_store, repo, pipeline)
+	}
+
 	// fetch the pipeline file from the forge
 	configService := server.Config.Services.Manager.ConfigServiceFromRepo(repo)
 	forgeYamlConfigs, configFetchErr := configService.Fetch(ctx, _forge, repoUser, repo, pipeline, nil, false)
@@ -140,7 +148,7 @@ func Create(ctx context.Context, _store store.Store, repo *model.Repo, pipeline 
 		return nil, err
 	}
 
-	pipeline, err = start(ctx, _forge, _store, pipeline, repoUser, repo, pipelineItems)
+	pipeline, err = start(ctx, _forge, _store, pipeline, repoUser, repo, pipelineItems, superseded)
 	if err != nil {
 		msg := fmt.Sprintf("failed to start pipeline for %s", repo.FullName)
 		log.Error().Err(err).Msg(msg)

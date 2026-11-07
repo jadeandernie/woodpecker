@@ -28,11 +28,16 @@ import (
 )
 
 // start a pipeline, make sure it was stored persistent in the store before.
-func start(ctx context.Context, forge forge.Forge, store store.Store, activePipeline *model.Pipeline, user *model.User, repo *model.Repo, pipelineItems []*builder.Item) (*model.Pipeline, error) {
+// If the repo squashes pending pipelines, superseded are the previous pipelines
+// squashed into this one (see squashPreviousPipelines); they are canceled once
+// this pipeline is queued, and no other previous pipeline is canceled.
+func start(ctx context.Context, forge forge.Forge, store store.Store, activePipeline *model.Pipeline, user *model.User, repo *model.Repo, pipelineItems []*builder.Item, superseded []*model.Pipeline) (*model.Pipeline, error) {
 	// call to cancel previous pipelines if needed
-	if err := cancelPreviousPipelines(ctx, forge, store, activePipeline, repo, user); err != nil {
-		// should be not breaking
-		log.Error().Err(err).Msg("failed to cancel previous pipelines")
+	if !repo.CancelPreviousPipelineSquash {
+		if err := cancelPreviousPipelines(ctx, forge, store, activePipeline, repo, user); err != nil {
+			// should be not breaking
+			log.Error().Err(err).Msg("failed to cancel previous pipelines")
+		}
 	}
 
 	org, err := store.OrgGet(repo.OrgID)
@@ -50,6 +55,10 @@ func start(ctx context.Context, forge forge.Forge, store store.Store, activePipe
 		log.Error().Err(err).Msg("startPipeline")
 		return nil, err
 	}
+
+	// only cancel the superseded pipelines now that their changes are queued
+	// with this one, so a failure to queue it loses none of them
+	cancelSupersededPipelines(ctx, forge, store, activePipeline, superseded, repo, user)
 
 	updatePipelineStatus(ctx, forge, activePipeline, repo, user)
 

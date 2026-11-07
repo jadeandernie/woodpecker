@@ -160,3 +160,109 @@ func sameEventAndContext(pipeline, other *model.Pipeline) bool {
 	}
 }
 
+// squashPreviousPipelines returns the previous pipelines the given pipeline
+// supersedes if the repo squashes pending pipelines, and adds their changed
+// files to the pipeline's own, so path filters evaluated on it also cover the
+// changes of the pipelines it is about to cancel.
+//
+// A previous pipeline is superseded if it was triggered by the same event for
+// the same context, is older and has not started yet (pending or blocked).
+// Pipelines without changed files (unknown changes, decided by `on_empty`)
+// are only squashed into a pipeline without changed files and vice versa, as
+// their union would change what `on_empty` decides for one of them.
+//
+// Call it before the pipeline's workflows are built, and hand the result to
+// start, which cancels exactly these pipelines once the new one is queued.
+func squashPreviousPipelines(_store store.Store, repo *model.Repo, pipeline *model.Pipeline) []*model.Pipeline {
+	if !repo.CancelPreviousPipelineSquash || !slices.Contains(repo.CancelPreviousPipelineEvents, pipeline.Event) {
+		return nil
+	}
+
+	activePipelines, err := _store.GetActivePipelineList(repo)
+	if err != nil {
+		log.Error().Err(err).Str("repo", repo.FullName).Msg("failed to list active pipelines to squash")
+		return nil
+	}
+
+	ownChangesKnown := len(pipeline.ChangedFiles) > 0
+	var superseded []*model.Pipeline
+	for _, active := range activePipelines {
+		if active.ID == pipeline.ID || active.Number >= pipeline.Number {
+			continue
+		}
+		if active.Status != model.StatusPending && active.Status != model.StatusBlocked {
+			continue
+		}
+		if !sameEventAndContext(pipeline, active) {
+			continue
+		}
+		if (len(active.ChangedFiles) > 0) != ownChangesKnown {
+			continue
+		}
+		superseded = append(superseded, active)
+	}
+
+	pipeline.ChangedFiles = mergeChangedFiles(pipeline.ChangedFiles, superseded)
+
+	return superseded
+}
+
+// mergeChangedFiles returns the changed files followed by those of the given
+// pipelines that are not in the list yet.
+func mergeChangedFiles(changedFiles []string, pipelines []*model.Pipeline) []string {
+	if len(pipelines) == 0 {
+		return changedFiles
+	}
+
+	merged := slices.Clone(changedFiles)
+	seen := make(map[string]struct{}, len(changedFiles))
+	for _, file := range changedFiles {
+		seen[file] = struct{}{}
+	}
+	for _, p := range pipelines {
+		for _, file := range p.ChangedFiles {
+			if _, ok := seen[file]; ok {
+				continue
+			}
+			seen[file] = struct{}{}
+			merged = append(merged, file)
+		}
+	}
+	return merged
+}
+
+// cancelSupersededPipelines cancels the pipelines squashed into the given one.
+// A pipeline that started in the meantime is left to run: the new pipeline
+// covers its changes as well, so nothing is lost, they just run twice.
+func cancelSupersededPipelines(
+	ctx context.Context,
+	_forge forge.Forge,
+	_store store.Store,
+	pipeline *model.Pipeline,
+	superseded []*model.Pipeline,
+	repo *model.Repo,
+	user *model.User,
+) {
+	for _, previous := range superseded {
+		current, err := _store.GetPipeline(previous.ID)
+		if err != nil {
+			log.Error().Err(err).Int64("id", previous.ID).Msg("failed to load superseded pipeline")
+			continue
+		}
+
+		if current.Status != model.StatusPending && current.Status != model.StatusBlocked {
+			log.Debug().Str("repo", repo.FullName).Msgf("pipeline #%d superseded by #%d already left status %s, not canceling it", current.Number, pipeline.Number, current.Status)
+			continue
+		}
+
+		if err := Cancel(ctx, _forge, _store, repo, user, current, &model.CancelInfo{
+			SupersededBy: pipeline.Number,
+		}); err != nil {
+			log.Error().
+				Err(err).
+				Str("ref", current.Ref).
+				Int64("id", current.ID).
+				Msg("failed to cancel superseded pipeline")
+		}
+	}
+}
