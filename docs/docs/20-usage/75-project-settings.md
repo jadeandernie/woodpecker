@@ -74,3 +74,16 @@ After this timeout a pipeline has to finish or will be treated as timed out.
 ## Cancel previous pipelines
 
 By enabling this option for a pipeline event previous pipelines of the same event and context will be canceled before starting the newly triggered one.
+
+### Squash pending pipelines
+
+By default a new pipeline cancels the previous ones even if they are already running, and only runs for its own changes. If [path filters](./20-workflow-syntax.md#path) decide which workflows run, the changes of a canceled pipeline are then never built or deployed.
+
+With **Squash pending pipelines** enabled, a new pipeline only cancels previous pipelines (of an event selected above, with the same context) that have not started yet, and runs for their changes too: the files they changed are added to its own changed files before its configuration is fetched and its path filters are evaluated, and `CI_PIPELINE_FILES` lists all of them. A pipeline that is already running is left to finish. A branch with frequent pushes so has at most one running and one pending pipeline at a time, and the pending one covers every change since the running one.
+
+- Previous pipelines are only squashed into a newer one, never into a pipeline of an older commit, and a restarted pipeline squashes none.
+- A pipeline waiting for approval squashes the previous pipelines when it is approved, and a previous pipeline waiting for approval is squashed like a pending one.
+- Only the changed files are carried over. Conditions on the commit message, author or other pipeline metadata are evaluated for the newest commit.
+- Pipelines with unknown changes (no changed files, e.g. cron or manual pipelines and pushes where the forge reported no files) are only squashed with each other, as the `on_empty` setting of a path filter decides for them.
+- If the new pipeline fails to start (e.g. its configuration cannot be loaded, or all its workflows are filtered out), the previous pipelines are not canceled.
+- To also run at most one pipeline per branch at a time, limit the workflows' [concurrency](./20-workflow-syntax.md#concurrency) or use a single agent.
