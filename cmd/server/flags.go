@@ -116,6 +116,12 @@ var flags = append([]cli.Flag{
 		Usage:   "max time to wait for pipeline creation triggered by an incoming webhook before responding 202 Accepted and finishing it in the background; 0 disables the fallback and always responds synchronously",
 		Value:   5 * time.Second,
 	},
+	&cli.DurationFlag{
+		Sources: cli.EnvVars("WOODPECKER_WEBHOOK_PIPELINE_CREATION_TIMEOUT"),
+		Name:    "webhook-pipeline-creation-timeout",
+		Usage:   "max time the pipeline creation triggered by an incoming webhook may take, including all forge retries of loading its config",
+		Value:   2 * time.Minute,
+	},
 	&cli.StringFlag{
 		Sources: cli.EnvVars("WOODPECKER_GRPC_ADDR"),
 		Name:    "grpc-addr",

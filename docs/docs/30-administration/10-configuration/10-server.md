@@ -870,6 +870,15 @@ Maximum time to wait for the pipeline creation triggered by an incoming webhook.
 
 ---
 
+### WEBHOOK_PIPELINE_CREATION_TIMEOUT
+
+- Name: `WOODPECKER_WEBHOOK_PIPELINE_CREATION_TIMEOUT`
+- Default: `2m`
+
+Maximum time the pipeline creation triggered by an incoming webhook may take, including the time after [`WEBHOOK_SYNC_TIMEOUT`](#webhook_sync_timeout) has already answered the forge, after which it fails with an error. This includes loading the configuration from the forge with all its retries, see [`FORGE_TIMEOUT`](#forge_timeout) and [`FORGE_RETRY`](#forge_retry). Raise it if large configuration folders take longer to load. `0` keeps the default.
+
+---
+
 ### SESSION_EXPIRES
 
 - Name: `WOODPECKER_SESSION_EXPIRES`

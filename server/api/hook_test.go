@@ -15,11 +15,13 @@
 package api_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -51,6 +53,8 @@ func TestHook(t *testing.T) {
 	server.Config.Permissions.Open = true
 	server.Config.Permissions.Orgs = permissions.NewOrgs(nil)
 	server.Config.Permissions.Admins = permissions.NewAdmins(nil)
+	server.Config.Server.WebhookPipelineCreationTimeout = time.Hour
+	t.Cleanup(func() { server.Config.Server.WebhookPipelineCreationTimeout = 0 })
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Set("store", _store)
@@ -93,7 +97,10 @@ func TestHook(t *testing.T) {
 	_store.On("UpdateRepo", repo).Return(nil)
 	_store.On("CreatePipeline", mock.Anything).Return(nil)
 	_manager.On("ConfigServiceFromRepo", repo).Return(_configService)
-	_configService.On("Fetch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	var fetchDeadline time.Time
+	_configService.On("Fetch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) { fetchDeadline, _ = args.Get(0).(context.Context).Deadline() }).
+		Return(nil, nil)
 	_forge.On("Netrc", mock.Anything, mock.Anything).Return(&model.Netrc{}, nil)
 	_store.On("GetPipelineLastBefore", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	_manager.On("SecretServiceFromRepo", repo).Return(_secretService)
@@ -107,4 +114,6 @@ func TestHook(t *testing.T) {
 
 	assert.Equal(t, http.StatusNoContent, c.Writer.Status())
 	assert.Equal(t, "true", w.Header().Get("Pipeline-Filtered"))
+	// the config is loaded within the configured pipeline creation timeout
+	assert.WithinDuration(t, time.Now().Add(time.Hour), fetchDeadline, time.Minute)
 }
