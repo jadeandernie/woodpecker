@@ -109,14 +109,15 @@ func (s *WoodpeckerServer) Init(c context.Context, req *proto.InitRequest) (*pro
 // Update let agent updates the step state at the server.
 func (s *WoodpeckerServer) Update(c context.Context, req *proto.UpdateRequest) (*proto.Empty, error) {
 	state := rpc.StepState{
-		StepUUID: req.GetState().GetStepUuid(),
-		Started:  req.GetState().GetStarted(),
-		Finished: req.GetState().GetFinished(),
-		Exited:   req.GetState().GetExited(),
-		Error:    req.GetState().GetError(),
-		ExitCode: int(req.GetState().GetExitCode()),
-		Canceled: req.GetState().GetCanceled(),
-		Skipped:  req.GetState().GetSkipped(),
+		StepUUID:   req.GetState().GetStepUuid(),
+		Started:    req.GetState().GetStarted(),
+		Finished:   req.GetState().GetFinished(),
+		Exited:     req.GetState().GetExited(),
+		Error:      req.GetState().GetError(),
+		ExitCode:   int(req.GetState().GetExitCode()),
+		MemoryPeak: req.GetState().GetMemoryPeak(),
+		Canceled:   req.GetState().GetCanceled(),
+		Skipped:    req.GetState().GetSkipped(),
 	}
 	res := new(proto.Empty)
 	err := s.peer.Update(c, req.GetId(), state)

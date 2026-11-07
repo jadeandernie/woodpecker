@@ -507,7 +507,7 @@ func TestFileAndDir(t *testing.T) {
 				`{"type":"blob","mode":"100644","path":"b.yaml"}]}`))
 		},
 		"/api/v1/repos/owner/repo/git/trees/": respond(http.StatusNotFound, `{"message":"not found"}`),
-		"/api/v1/repos/owner/repo/contents/": respond(http.StatusNotFound, `{"message":"not found"}`),
+		"/api/v1/repos/owner/repo/contents/":  respond(http.StatusNotFound, `{"message":"not found"}`),
 		"/api/v1/repos/owner/repo/raw/": func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "abc", r.URL.Query().Get("ref"))
 			switch strings.TrimPrefix(r.URL.Path, "/api/v1/repos/owner/repo/raw/") {

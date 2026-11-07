@@ -50,6 +50,8 @@ message StepState {
   string error = 6;
   bool   canceled = 7;
   bool   skipped = 8;
+  // highest memory use of the step's container in bytes, 0 when unknown
+  int64  memory_peak = 9;
 }
 
 message WorkflowState {

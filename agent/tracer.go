@@ -44,6 +44,8 @@ func (r *Runner) createTracer(ctxMeta context.Context, logger zerolog.Logger, wo
 			Started:  state.CurrStepState.Started,
 			Canceled: errors.Is(state.CurrStepState.Error, pipeline_errors.ErrCancel),
 			Skipped:  state.CurrStepState.Skipped,
+
+			MemoryPeak: state.CurrStepState.MemoryPeak,
 		}
 		if state.CurrStepState.Error != nil {
 			stepState.Error = state.CurrStepState.Error.Error()

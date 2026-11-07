@@ -27,6 +27,9 @@ type State struct {
 	// Container is oom killed, true or false
 	// TODO (6024): well known errors as string enum into ./errors.go
 	OOMKilled bool `json:"oom_killed"`
+	// MemoryPeak is the highest memory use of the container in bytes, 0 when
+	// the backend does not measure it.
+	MemoryPeak int64 `json:"memory_peak"`
 	// Container error
 	Error error
 }

@@ -285,6 +285,12 @@ func (e *docker) WaitStep(ctx context.Context, step *backend_types.Step, taskUUI
 
 	containerName := toContainerName(step)
 
+	// follow the memory use until the container exits; the stats stream ends
+	// with the container
+	statsCtx, stopStats := context.WithCancel(ctx)
+	defer stopStats()
+	memory := watchMemory(statsCtx, e.client, containerName)
+
 	wait := e.client.ContainerWait(ctx, containerName, client.ContainerWaitOptions{})
 	select {
 	case resp := <-wait.Result:
@@ -310,10 +316,17 @@ func (e *docker) WaitStep(ctx context.Context, step *backend_types.Step, taskUUI
 		exitCode = -1
 	}
 
+	// the stream ends on its own once the container stopped; do not wait long
+	peakCtx, cancelPeak := context.WithTimeout(ctx, memoryPeakWait)
+	defer cancelPeak()
+	peak := memory.Peak(peakCtx)
+	stopStats()
+
 	return &backend_types.State{
-		Exited:    true,
-		ExitCode:  exitCode,
-		OOMKilled: info.Container.State.OOMKilled,
+		Exited:     true,
+		ExitCode:   exitCode,
+		OOMKilled:  info.Container.State.OOMKilled,
+		MemoryPeak: peak,
 	}, nil
 }
 

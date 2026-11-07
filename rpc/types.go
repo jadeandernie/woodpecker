@@ -34,6 +34,9 @@ type (
 		Error    string `json:"error"`
 		Canceled bool   `json:"canceled"`
 		Skipped  bool   `json:"skipped"`
+		// MemoryPeak is the highest memory use of the step's container in
+		// bytes, 0 when the backend does not report it.
+		MemoryPeak int64 `json:"memory_peak"`
 	}
 
 	// WorkflowState defines the workflow state.

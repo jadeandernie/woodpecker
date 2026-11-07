@@ -38,6 +38,9 @@ type Step struct {
 	Finished   int64       `json:"finished,omitempty"   xorm:"finished"`
 	Type       StepType    `json:"type,omitempty"       xorm:"type"`
 	DependsOn  []string    `json:"depends_on,omitempty" xorm:"json 'depends_on'"`
+	// MemoryPeak is the highest memory use of the step's container in bytes,
+	// 0 when the agent's backend did not report it.
+	MemoryPeak int64 `json:"memory_peak,omitempty" xorm:"NOT NULL DEFAULT 0 'memory_peak'"`
 } //	@name	Step
 
 // TableName return database table name for xorm.
