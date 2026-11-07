@@ -121,30 +121,13 @@ func cancelPreviousPipelines(
 		return err
 	}
 
-	pipelineNeedsCancel := func(active *model.Pipeline) bool {
-		// always filter on same event
-		if active.Event != pipeline.Event {
-			return false
-		}
-
-		// find events for the same context
-		switch pipeline.Event {
-		case model.EventPush:
-			return pipeline.Branch == active.Branch
-		default:
-			return pipeline.Refspec == active.Refspec
-		}
-	}
-
 	for _, active := range activeBuilds {
 		if active.ID == pipeline.ID {
 			// same pipeline. e.g. self
 			continue
 		}
 
-		cancel := pipelineNeedsCancel(active)
-
-		if !cancel {
+		if !sameEventAndContext(pipeline, active) {
 			continue
 		}
 
@@ -161,3 +144,19 @@ func cancelPreviousPipelines(
 
 	return nil
 }
+
+// sameEventAndContext reports whether two pipelines were triggered by the same
+// event for the same context: the branch for pushes, the refspec otherwise.
+func sameEventAndContext(pipeline, other *model.Pipeline) bool {
+	if other.Event != pipeline.Event {
+		return false
+	}
+
+	switch pipeline.Event {
+	case model.EventPush:
+		return pipeline.Branch == other.Branch
+	default:
+		return pipeline.Refspec == other.Refspec
+	}
+}
+
