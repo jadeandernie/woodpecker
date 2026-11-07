@@ -1,6 +1,15 @@
 <template>
-  <ListItem v-if="pipeline" class="w-full p-0!">
-    <div class="flex w-11 items-center">
+  <ListItem
+    v-if="pipeline"
+    class="relative w-full p-0!"
+    :class="{ 'hover:bg-wp-control-neutral-100 dark:hover:bg-wp-control-neutral-200 cursor-pointer': to }"
+  >
+    <!-- the status opens the workflow graph, the rest of the item the pipeline -->
+    <router-link
+      :to="{ name: 'repo-pipeline-graph', params: { pipelineId: pipeline.number } }"
+      :title="$t('repo.pipeline.graph.open')"
+      class="hover:bg-wp-control-neutral-200 relative z-10 flex w-11 shrink-0 items-center"
+    >
       <div
         class="h-full w-3"
         :class="{
@@ -15,7 +24,7 @@
         <PipelineRunningIcon v-if="pipeline.status === 'started' || pipeline.status === 'running'" />
         <PipelineStatusIcon v-else class="mx-2 md:mx-3" :status="pipeline.status" />
       </div>
-    </div>
+    </router-link>
 
     <div class="flex min-w-0 grow flex-wrap px-4 py-2 md:flex-nowrap">
       <div class="hidden shrink-0 items-center md:flex">
@@ -28,12 +37,19 @@
         <span class="md:display-unset text-wp-text-alt-100 hidden">#{{ pipeline.number }}</span>
         <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         <span class="md:display-unset text-wp-text-alt-100 mx-2 hidden">-</span>
-        <RenderMarkdown
-          class="text-wp-text-100 overflow-hidden text-ellipsis whitespace-nowrap underline md:no-underline"
-          :title="message"
-          :content="shortMessage"
-          inline
-        />
+        <component
+          :is="to ? 'router-link' : 'span'"
+          :to="to"
+          class="min-w-0 overflow-hidden"
+          :class="{ 'after:absolute after:inset-0': to }"
+        >
+          <RenderMarkdown
+            class="text-wp-text-100 overflow-hidden text-ellipsis whitespace-nowrap underline md:no-underline"
+            :title="message"
+            :content="shortMessage"
+            inline
+          />
+        </component>
       </div>
 
       <div
@@ -80,6 +96,7 @@
 <script lang="ts" setup>
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
+import type { RouteLocationRaw } from 'vue-router';
 
 import Icon from '~/components/atomic/Icon.vue';
 import ListItem from '~/components/atomic/ListItem.vue';
@@ -93,6 +110,8 @@ import type { Pipeline } from '~/lib/api/types';
 
 const props = defineProps<{
   pipeline: Pipeline;
+  // where the item leads; the status always leads to the workflow graph
+  to?: RouteLocationRaw;
 }>();
 
 const { t } = useI18n();

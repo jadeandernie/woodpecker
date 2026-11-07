@@ -3,7 +3,7 @@
     v-if="pipeline && repo"
     enable-tabs
     :go-back="goBack"
-    :fluid-content="route.name === 'repo-pipeline'"
+    :fluid-content="route.name === 'repo-pipeline' || route.name === 'repo-pipeline-graph'"
     full-width-header
   >
     <template #title>
@@ -20,8 +20,14 @@
     <template #headerActions>
       <div class="flex w-full items-center justify-between gap-2">
         <div class="flex min-w-0 content-start gap-2">
-          <PipelineStatusIcon :status="pipeline.status" class="flex shrink-0" />
-          <span class="shrink-0 text-center">{{ $t('repo.pipeline.pipeline', { pipelineId }) }}</span>
+          <router-link
+            :to="{ name: 'repo-pipeline-graph' }"
+            :title="$t('repo.pipeline.graph.open')"
+            class="flex shrink-0 items-center gap-2 hover:underline"
+          >
+            <PipelineStatusIcon :status="pipeline.status" class="flex shrink-0" />
+            <span class="shrink-0 text-center">{{ $t('repo.pipeline.pipeline', { pipelineId }) }}</span>
+          </router-link>
           <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
           <span class="hidden md:inline-block">-</span>
           <RenderMarkdown
@@ -100,6 +106,7 @@
     </template>
 
     <Tab icon="tray-full" :to="{ name: 'repo-pipeline' }" :title="$t('repo.pipeline.tasks')" />
+    <Tab icon="agent" :to="{ name: 'repo-pipeline-graph' }" :title="$t('repo.pipeline.graph.title')" />
     <Tab
       v-if="errorsTabCount > 0"
       :to="{ name: 'repo-pipeline-errors' }"
@@ -217,8 +224,9 @@ const { doSubmit: restartPipeline, isLoading: isRestartingPipeline } = useAsyncA
     fork: true,
   });
   notifications.notify({ title: i18n.t('repo.pipeline.actions.restart_success'), type: 'success' });
+  // stay on the graph when restarting from it
   await router.push({
-    name: 'repo-pipeline',
+    name: route.name === 'repo-pipeline-graph' ? 'repo-pipeline-graph' : 'repo-pipeline',
     params: { pipelineId: newPipeline.number },
   });
 });

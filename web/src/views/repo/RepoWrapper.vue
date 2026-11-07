@@ -11,9 +11,17 @@
       </span>
     </template>
     <template #headerActions>
-      <a v-if="badgeUrl" :href="badgeUrl" target="_blank">
+      <router-link
+        v-if="badgeUrl"
+        :to="badgeLink"
+        :title="
+          latestDefaultPipeline
+            ? $t('repo.pipeline.graph.latest', { branch: repo.default_branch })
+            : $t('repo.activity')
+        "
+      >
         <img :src="badgeUrl" />
-      </a>
+      </router-link>
       <IconButton :href="repo.forge_url" :title="$t('repo.open_in_forge')" :icon="forgeIcon" class="forge h-8 w-8" />
       <IconButton
         v-if="repoPermissions.admin"
@@ -47,6 +55,7 @@
       match-children
       :title="$t('repo.pull_requests')"
     />
+    <Tab icon="duration" :to="{ name: 'repo-insights' }" :title="$t('repo.insights.title')" />
 
     <Warning v-if="permSyncFailed" class="mb-4 text-sm" :text="$t('repo.perm_sync_failed')" />
     <router-view />
@@ -73,7 +82,7 @@ import { useForgeStore } from '~/compositions/useForgeStore';
 import { provide } from '~/compositions/useInjectProvide';
 import useNotifications from '~/compositions/useNotifications';
 import useRepos from '~/compositions/useRepos';
-import type { Forge, Repo, RepoPermissions } from '~/lib/api/types';
+import type { Forge, Pipeline, Repo, RepoPermissions } from '~/lib/api/types';
 import { usePipelineStore } from '~/store/pipelines';
 import { useRepoStore } from '~/store/repos';
 
@@ -124,6 +133,7 @@ async function loadRepo() {
 
   await repoStore.loadRepo(repositoryId.value);
   await pipelineStore.loadRepoPipelines(repositoryId.value);
+  await loadLatestDefaultPipeline();
 
   if (repo.value) {
     forge.value = (await forgeStore.getForge(repo.value?.forge_id)).value;
@@ -149,4 +159,41 @@ const permSyncFailed = computed(() => {
 });
 
 const badgeUrl = computed(() => repo.value && `${config.rootPath}/api/badges/${repo.value.id}/status.svg`);
+
+// the badge shows the state of the default branch like the status badge on the server, which only counts pushes
+function isBadgePipeline(pipeline: Pipeline): boolean {
+  return pipeline.branch === repo.value?.default_branch && pipeline.event === 'push';
+}
+
+// the latest default branch pipeline from the API, in case the pipelines loaded for the activity list miss it
+const fetchedDefaultPipeline = ref<Pipeline>();
+
+async function loadLatestDefaultPipeline() {
+  fetchedDefaultPipeline.value = undefined;
+  if (!repo.value) {
+    return;
+  }
+  try {
+    const list = await apiClient.getPipelineList(repo.value.id, { branch: repo.value.default_branch, perPage: 10 });
+    fetchedDefaultPipeline.value = list.find(isBadgePipeline);
+  } catch {
+    // without it the badge links to the activity list
+  }
+}
+
+// the store's pipelines are kept up to date by the event stream, so a newer pipeline shows up there first
+const latestDefaultPipeline = computed(() => {
+  const live = pipelines.value.find(isBadgePipeline);
+  const fetched = fetchedDefaultPipeline.value;
+  if (live && fetched) {
+    return live.number >= fetched.number ? live : fetched;
+  }
+  return live ?? fetched;
+});
+
+const badgeLink = computed(() =>
+  latestDefaultPipeline.value
+    ? { name: 'repo-pipeline-graph', params: { pipelineId: latestDefaultPipeline.value.number } }
+    : { name: 'repo' },
+);
 </script>
