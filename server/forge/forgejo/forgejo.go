@@ -43,6 +43,10 @@ const (
 	accessTokenURL    = "%s/login/oauth/access_token"
 	defaultPageSize   = 50
 	forgejoDevVersion = "v7.0.2"
+
+	// maxPushFirstParentCommits caps the number of commits fetched to compute
+	// the changed files of a branch push.
+	maxPushFirstParentCommits = 50
 )
 
 type Forgejo struct {
@@ -503,7 +507,7 @@ func (c *Forgejo) PullRequests(ctx context.Context, u *model.User, r *model.Repo
 // Hook parses the incoming Forgejo hook and returns the Repository and Pipeline
 // details. If the hook is unsupported nil values are returned.
 func (c *Forgejo) Hook(ctx context.Context, r *http.Request) (*model.Repo, *model.Pipeline, error) {
-	repo, pipeline, err := parseHook(r)
+	repo, pipeline, push, err := parseHook(r)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -531,6 +535,17 @@ func (c *Forgejo) Hook(ctx context.Context, r *http.Request) (*model.Repo, *mode
 				pipeline.ChangedFiles, err = c.getChangedFilesForPR(ctx, repo, index)
 				if err != nil {
 					log.Error().Err(err).Msgf("could not get changed files for PR %s#%d", repo.FullName, index)
+				}
+			}
+
+		case model.EventPush:
+			if push != nil {
+				files, err := c.getChangedFilesForPush(ctx, repo, push.Before, push.After)
+				if err != nil {
+					log.Warn().Err(err).Msgf("could not get first-parent changed files for push %s..%s to %s, using the files of the pushed commits instead",
+						push.Before, push.After, repo.FullName)
+				} else {
+					pipeline.ChangedFiles = files
 				}
 			}
 		}
@@ -671,6 +686,75 @@ func (c *Forgejo) getChangedFilesForPR(ctx context.Context, repo *model.Repo, in
 		}
 		return files, nil
 	}, -1)
+}
+
+// getChangedFilesForPush returns the files changed by a branch push from
+// before to after, as the union of the files changed by each commit on the
+// first-parent chain from after back to before.
+//
+// The commit list of the push payload can not be used for this: a commit that
+// merges the base branch into a feature branch lists every file the base branch
+// changed since the branch point, so merging such a pull request would report
+// all of them as changed. Following the first parents only counts what the
+// push actually changed on the pushed branch.
+//
+// An error is returned if the range can not be resolved, e.g. for new branches,
+// force pushes, or pushes of more than maxPushFirstParentCommits commits.
+func (c *Forgejo) getChangedFilesForPush(ctx context.Context, repo *model.Repo, before, after string) ([]string, error) {
+	if isZeroSHA(before) || isZeroSHA(after) {
+		return nil, fmt.Errorf("push range %s..%s has no base commit", before, after)
+	}
+
+	_store, ok := store.TryFromContext(ctx)
+	if !ok {
+		return nil, errors.New("could not get store from context")
+	}
+
+	repo, err := _store.GetRepoNameFallback(c.id, repo.ForgeRemoteID, repo.FullName)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := _store.GetUser(repo.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	forge.Refresh(ctx, c, _store, user)
+
+	client, err := c.newClientToken(ctx, user.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	var files []string
+	sha := after
+	for i := 0; sha != before; i++ {
+		if i == maxPushFirstParentCommits {
+			return nil, fmt.Errorf("%s is not within %d first-parent commits of %s", before, maxPushFirstParentCommits, after)
+		}
+
+		commit, _, err := client.GetSingleCommit(repo.Owner, repo.Name, sha)
+		if err != nil {
+			return nil, fmt.Errorf("could not get commit %s: %w", sha, err)
+		}
+		for _, file := range commit.Files {
+			files = append(files, file.Filename)
+		}
+
+		if len(commit.Parents) == 0 || commit.Parents[0] == nil {
+			return nil, fmt.Errorf("%s is not a first-parent ancestor of %s", before, after)
+		}
+		sha = commit.Parents[0].SHA
+	}
+
+	return shared_utils.DeduplicateStrings(files), nil
+}
+
+// isZeroSHA reports whether sha is empty or the all-zero object id a forge
+// sends for a ref that did not exist before (or no longer exists after) a push.
+func isZeroSHA(sha string) bool {
+	return strings.Trim(sha, "0") == ""
 }
 
 func (c *Forgejo) getTagCommitSHA(ctx context.Context, repo *model.Repo, tagName string) (string, error) {

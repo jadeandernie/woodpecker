@@ -16,6 +16,7 @@ package forgejo
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -145,6 +146,97 @@ func Test_forgejo(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, model.EventPull, b.Event)
 		assert.Equal(t, []string{"README.md"}, b.ChangedFiles)
+	})
+}
+
+func Test_forgejoPushChangedFiles(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	s := httptest.NewServer(fixtures.Handler())
+	defer s.Close()
+	f, _ := New(1, Opts{
+		URL:        s.URL,
+		SkipVerify: true,
+	})
+	c, _ := f.(*Forgejo)
+
+	mockStore := store_mocks.NewMockStore(t)
+	mockStore.On("GetRepoNameFallback", mock.Anything, mock.Anything, mock.Anything).Return(fakeRepo, nil).Maybe()
+	mockStore.On("GetUser", mock.Anything).Return(fakeUser, nil).Maybe()
+	ctx := store.InjectToContext(t.Context(), mockStore)
+
+	t.Run("merged pull request only reports its own changes", func(t *testing.T) {
+		// the pushed commits include mergeMainIntoFeature, whose files were changed by main, not the pull request
+		files, err := c.getChangedFilesForPush(ctx, fakeRepo, "main1", "prMerge")
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"service/a.go", "service/b.go"}, files)
+	})
+	t.Run("multiple first-parent commits are combined", func(t *testing.T) {
+		files, err := c.getChangedFilesForPush(ctx, fakeRepo, "main1", "main2")
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"service/a.go", "docs/c.md", "service/b.go"}, files)
+	})
+	t.Run("pushed branch whose first parent is the old head", func(t *testing.T) {
+		files, err := c.getChangedFilesForPush(ctx, fakeRepo, "feature1", "feature2")
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"service/b.go", "other/main.go"}, files)
+	})
+	t.Run("no commits pushed", func(t *testing.T) {
+		files, err := c.getChangedFilesForPush(ctx, fakeRepo, "main1", "main1")
+		assert.NoError(t, err)
+		assert.Empty(t, files)
+	})
+	t.Run("new branch", func(t *testing.T) {
+		_, err := c.getChangedFilesForPush(ctx, fakeRepo, "0000000000000000000000000000000000000000", "prMerge")
+		assert.Error(t, err)
+	})
+	t.Run("before is not a first-parent ancestor", func(t *testing.T) {
+		// e.g. a force push; the walk reaches the root commit without passing before
+		_, err := c.getChangedFilesForPush(ctx, fakeRepo, "feature1", "prMerge")
+		assert.Error(t, err)
+	})
+	t.Run("walk is capped", func(t *testing.T) {
+		files, err := c.getChangedFilesForPush(ctx, fakeRepo, "chain0", fmt.Sprintf("chain%d", maxPushFirstParentCommits))
+		assert.NoError(t, err)
+		assert.Len(t, files, maxPushFirstParentCommits)
+
+		_, err = c.getChangedFilesForPush(ctx, fakeRepo, "chain0", fmt.Sprintf("chain%d", maxPushFirstParentCommits+1))
+		assert.Error(t, err)
+	})
+	t.Run("unknown commit", func(t *testing.T) {
+		_, err := c.getChangedFilesForPush(ctx, fakeRepo, "main1", "unknown")
+		assert.Error(t, err)
+	})
+	t.Run("no store in context", func(t *testing.T) {
+		_, err := c.getChangedFilesForPush(t.Context(), fakeRepo, "main1", "prMerge")
+		assert.Error(t, err)
+	})
+
+	pushHook := func(t *testing.T, payload string) *model.Pipeline {
+		req, _ := http.NewRequest(http.MethodPost, "/hook", bytes.NewBufferString(payload))
+		req.Header = http.Header{}
+		req.Header.Set(hookEvent, hookPush)
+		r, b, err := c.Hook(ctx, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, r)
+		if assert.NotNil(t, b) {
+			assert.Equal(t, model.EventPush, b.Event)
+		}
+		return b
+	}
+	t.Run("push hook uses first-parent changes", func(t *testing.T) {
+		// the payload lists CHANGELOG.md and app/controller/application.rb
+		b := pushHook(t, fixtures.HookPush)
+		assert.Equal(t, []string{"CHANGELOG.md"}, b.ChangedFiles)
+	})
+	t.Run("push hook falls back to payload for new branch", func(t *testing.T) {
+		b := pushHook(t, fixtures.HookPushBranch)
+		assert.Equal(t, []string{".woodpecker/.check.yml"}, b.ChangedFiles)
+	})
+	t.Run("push hook falls back to payload on API error", func(t *testing.T) {
+		// the fake forge does not know the commits of this fixture
+		b := pushHook(t, fixtures.HookPushMulti)
+		assert.Equal(t, []string{"aaa", "aa"}, b.ChangedFiles)
 	})
 }
 
