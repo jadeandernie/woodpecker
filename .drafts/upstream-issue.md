@@ -27,6 +27,7 @@ A repo setting **Squash pending pipelines**, below the "cancel previous pipeline
 2. Adds their changed files to its own **before** its configuration is fetched and its path filters are evaluated, so the new pipeline runs every workflow any of them would have run. `CI_PIPELINE_FILES` lists all of them.
 3. Cancels them only once it is itself queued. If it fails to start (config error, every workflow filtered out), they are left untouched.
 4. Leaves running pipelines alone.
+5. Takes the place in the queue of the oldest pipeline it supersedes, instead of going to the end of the queue behind every pipeline created since. Otherwise a branch with frequent pushes keeps losing its place, and its deploys starve behind later pull requests.
 
 A branch then has at most one pending pipeline at any time, and it covers every change since the pipelines that already started. Combined with a workflow `concurrency` limit (#6671) or a single agent, it also has at most one running pipeline.
 
