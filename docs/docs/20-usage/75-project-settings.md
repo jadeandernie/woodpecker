@@ -103,8 +103,8 @@ The pipeline view and the repository insights sort the workflows of a pipeline i
 
 By default the group and subgroup come from the workflow name. The name is split on `-`, `_`, `/` and `.`, and its first part is the stage:
 
-| First part of the name                                                                         | Group    |
-| ---------------------------------------------------------------------------------------------- | -------- |
+| First part of the name                                                                           | Group    |
+| ------------------------------------------------------------------------------------------------ | -------- |
 | `build`, `module`, `service`, `svc`, `worker`, `operators`, `compile`, `lint`, `image`, `docker` | `build`  |
 | `test`, `gate`, `check`, `nightly`, `acceptance`, `e2e`, `integration`, `unit`, `verify`         | `test`   |
 | `deploy`, `publish`, `release`, `staging`, `promote`, `rollout`                                  | `deploy` |
