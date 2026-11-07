@@ -75,6 +75,7 @@ type (
 		AllowPull                    bool                 `json:"allow_pr"`
 		Config                       string               `json:"config_file"`
 		CancelPreviousPipelineEvents []string             `json:"cancel_previous_pipeline_events"`
+		CancelPreviousPipelineSquash bool                 `json:"cancel_previous_pipeline_squash"`
 		NetrcTrustedPlugins          []string             `json:"netrc_trusted"`
 	}
 

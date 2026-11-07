@@ -294,6 +294,9 @@ func PatchRepo(c *gin.Context) {
 	if in.CancelPreviousPipelineEvents != nil {
 		repo.CancelPreviousPipelineEvents = *in.CancelPreviousPipelineEvents
 	}
+	if in.CancelPreviousPipelineSquash != nil {
+		repo.CancelPreviousPipelineSquash = *in.CancelPreviousPipelineSquash
+	}
 	if in.NetrcTrusted != nil {
 		repo.NetrcTrustedPlugins = *in.NetrcTrusted
 	}
