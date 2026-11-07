@@ -53,6 +53,8 @@ var Config = struct {
 		CustomJsFile          string
 		AsyncRepositoryUpdate bool
 		WebhookSyncTimeout    time.Duration
+		// WebhookPipelineCreationTimeout caps a webhook-triggered pipeline creation.
+		WebhookPipelineCreationTimeout time.Duration
 	}
 	Agent struct {
 		DisableUserRegisteredAgentRegistration bool
