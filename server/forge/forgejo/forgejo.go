@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -296,21 +297,9 @@ func (c *Forgejo) Dir(ctx context.Context, u *model.User, r *model.Repo, b *mode
 		return nil, err
 	}
 
-	// List files in repository
-	contents, resp, err := client.ListContents(r.Owner, r.Name, b.Commit, f)
+	paths, err := listDirFiles(client, r, b, f)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, errors.Join(err, &forge_types.ErrConfigNotFound{Configs: []string{f}})
-		}
 		return nil, err
-	}
-
-	// sub folders are no pipeline files
-	var paths []string
-	for _, e := range contents {
-		if e.Type == "file" {
-			paths = append(paths, e.Path)
-		}
 	}
 	if len(paths) == 0 {
 		return nil, nil
@@ -337,6 +326,70 @@ func (c *Forgejo) Dir(ctx context.Context, u *model.User, r *model.Repo, b *mode
 	}
 
 	return configs, nil
+}
+
+// treePageSize is how many entries Dir asks for per page of a git tree listing.
+const treePageSize = 100
+
+// listDirFiles returns the paths of the regular files directly in folder f at
+// the pipeline's commit, in tree order. It lists git trees rather than
+// contents, which loads every file's last commit and is slow on large
+// folders. Each tree is named by "<commit>:<first segment>", then by the
+// subtree's sha for each further segment, since the API route cannot take a
+// slash in the ref.
+func listDirFiles(client *forgejo.Client, r *model.Repo, b *model.Pipeline, f string) ([]string, error) {
+	segments := strings.Split(f, "/")
+	ref := b.Commit + ":" + segments[0]
+	for _, segment := range segments[1:] {
+		entries, err := listTree(client, r, ref, f)
+		if err != nil {
+			return nil, err
+		}
+		i := slices.IndexFunc(entries, func(e forgejo.GitEntry) bool { return e.Type == "tree" && e.Path == segment })
+		if i < 0 {
+			return nil, &forge_types.ErrConfigNotFound{Configs: []string{f}}
+		}
+		ref = entries[i].SHA
+	}
+
+	entries, err := listTree(client, r, ref, f)
+	if err != nil {
+		return nil, err
+	}
+	// sub folders, links and submodules are no pipeline files
+	var paths []string
+	for _, e := range entries {
+		if e.Type == "blob" && e.Mode != "120000" {
+			paths = append(paths, f+"/"+e.Path)
+		}
+	}
+	return paths, nil
+}
+
+// listTree returns all entries of one git tree, non-recursive, following its
+// pages until it has as many entries as the tree holds. Forgejo marks every
+// page as truncated, so only the total count tells when the listing is done.
+func listTree(client *forgejo.Client, r *model.Repo, ref, f string) ([]forgejo.GitEntry, error) {
+	var entries []forgejo.GitEntry
+	for page := 1; ; page++ {
+		tree, resp, err := client.GetTrees(r.Owner, r.Name, ref, forgejo.GetTreesOptions{
+			ListOptions: forgejo.ListOptions{Page: page, PageSize: treePageSize},
+		})
+		if err != nil {
+			// Forgejo answers a ref it cannot resolve with a bad request
+			if resp != nil && (resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusBadRequest) {
+				return nil, errors.Join(err, &forge_types.ErrConfigNotFound{Configs: []string{f}})
+			}
+			return nil, err
+		}
+		entries = append(entries, tree.Entries...)
+		if len(entries) >= tree.TotalCount {
+			return entries, nil
+		}
+		if len(tree.Entries) == 0 {
+			return nil, fmt.Errorf("listing %s ended after %d of %d entries", f, len(entries), tree.TotalCount)
+		}
+	}
 }
 
 // Status is supported by the Forgejo driver.
