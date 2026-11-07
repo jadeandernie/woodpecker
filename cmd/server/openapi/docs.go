@@ -5476,6 +5476,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/WebhookEvent"
                     }
                 },
+                "cancel_previous_pipeline_squash": {
+                    "type": "boolean"
+                },
                 "clone_url": {
                     "type": "string"
                 },
@@ -5595,6 +5598,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/WebhookEvent"
                     }
                 },
+                "cancel_previous_pipeline_squash": {
+                    "type": "boolean"
+                },
                 "clone_url": {
                     "type": "string"
                 },
@@ -5710,6 +5716,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/WebhookEvent"
                     }
+                },
+                "cancel_previous_pipeline_squash": {
+                    "type": "boolean"
                 },
                 "config_extension_endpoint": {
                     "type": "string"
