@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -341,6 +342,17 @@ func PatchRepo(c *gin.Context) {
 			return
 		}
 		repo.WorkflowGroups = *in.WorkflowGroups
+	}
+	if in.Train != nil {
+		train, err := in.Train.Apply(repo.TrainConfig())
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+		repo.Train = &train
+	}
+	if in.TrainBotToken != nil {
+		repo.TrainBotToken = strings.TrimSpace(*in.TrainBotToken)
 	}
 
 	err := _store.UpdateRepo(repo)

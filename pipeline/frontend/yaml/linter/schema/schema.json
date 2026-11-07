@@ -600,7 +600,8 @@
         "deployment",
         "cron",
         "manual",
-        "release"
+        "release",
+        "promote"
       ]
     },
     "event_constraint_list": {

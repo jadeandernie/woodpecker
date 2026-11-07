@@ -151,7 +151,8 @@ func cancelPreviousPipelines(
 }
 
 // sameEventAndContext reports whether two pipelines were triggered by the same
-// event for the same context: the branch for pushes, the refspec otherwise.
+// event for the same context: the branch for pushes and train promotes, the
+// refspec otherwise.
 func sameEventAndContext(pipeline, other *model.Pipeline) bool {
 	if other.Event != pipeline.Event {
 		return false
@@ -160,6 +161,10 @@ func sameEventAndContext(pipeline, other *model.Pipeline) bool {
 	switch pipeline.Event {
 	case model.EventPush:
 		return pipeline.Branch == other.Branch
+	case model.EventPromote:
+		// only a newer promote of the train branch supersedes an older one; the
+		// merge train owns its bisect pipelines and never has them canceled
+		return pipeline.Promote.IsTrain() && other.Promote.IsTrain() && pipeline.Branch == other.Branch
 	default:
 		return pipeline.Refspec == other.Refspec
 	}

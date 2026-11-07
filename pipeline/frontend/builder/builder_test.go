@@ -1458,3 +1458,65 @@ func TestSelectedWorkflowInvalidConfig(t *testing.T) {
 		})
 	}
 }
+
+func buildNames(t *testing.T, b PipelineBuilder) []string {
+	t.Helper()
+	items, err := b.Build()
+	assert.False(t, errors.HasBlockingErrors(err))
+	names := make([]string, 0, len(items))
+	for _, item := range items {
+		names = append(names, item.Workflow.Name)
+	}
+	return names
+}
+
+func TestWorkflowFilter(t *testing.T) {
+	t.Parallel()
+
+	m := &testMetadata{pipelineEvent: "manual"}
+	base := PipelineBuilder{
+		GetWorkflowMetadata: m.GetWorkflowMetadata,
+		RepoTrusted:         &metadata.TrustedConfiguration{},
+	}
+
+	t.Run("keeps the named workflows and their dependencies", func(t *testing.T) {
+		b := base
+		b.Yamls = selectedWorkflowYamls()
+		b.WorkflowFilter = []string{"deploy"}
+		assert.Equal(t, []string{"build", "deploy", "lint"}, buildNames(t, b))
+	})
+
+	t.Run("several names", func(t *testing.T) {
+		b := base
+		b.Yamls = selectedWorkflowYamls()
+		b.WorkflowFilter = []string{"lint", ".woodpecker/prod-only.yaml", "unknown"}
+		assert.Equal(t, []string{"lint"}, buildNames(t, b), "prod-only does not match and unknown does not exist")
+	})
+
+	t.Run("no named workflow exists", func(t *testing.T) {
+		b := base
+		b.Yamls = selectedWorkflowYamls()
+		b.WorkflowFilter = []string{"unknown"}
+		items, err := b.Build()
+		assert.NoError(t, err)
+		assert.Empty(t, items, "nothing to run is filtered, not an error")
+	})
+
+	t.Run("only dependencies left", func(t *testing.T) {
+		b := base
+		b.Yamls = selectedWorkflowYamls()
+		b.WorkflowFilter = []string{"push-only"}
+		items, err := b.Build()
+		assert.NoError(t, err)
+		assert.Empty(t, items)
+
+		b.Yamls = []*YamlFile{
+			{Name: "lint", Data: []byte("steps:\n  - name: lint\n    image: scratch\n")},
+			{Name: "test", Data: []byte("when:\n  event: push\nsteps:\n  - name: test\n    image: scratch\ndepends_on: [lint]\n")},
+		}
+		b.WorkflowFilter = []string{"test"}
+		items, err = b.Build()
+		assert.False(t, errors.HasBlockingErrors(err))
+		assert.Empty(t, items, "lint alone must not stand in for the filtered test workflow")
+	})
+}

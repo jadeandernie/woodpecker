@@ -27,6 +27,7 @@ const (
 	EventDeploy       Event = "deployment"
 	EventCron         Event = "cron"
 	EventManual       Event = "manual"
+	EventPromote      Event = "promote"
 )
 
 func (event Event) IsPull() bool {

@@ -18,6 +18,7 @@ package builder
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -49,6 +50,11 @@ type PipelineBuilder struct {
 	GetWorkflowMetadata func(workflow *Workflow) metadata.Metadata
 	// SelectedWorkflow, if set, limits to this workflow and its hard dependencies.
 	SelectedWorkflow string
+	// WorkflowFilter, if set, limits to these workflows and their hard
+	// dependencies. Unlike SelectedWorkflow it is not an error when none of them
+	// exist or match: the build then yields no items, so the pipeline is
+	// filtered instead of passing on its dependencies alone.
+	WorkflowFilter []string
 	// ListOnly reports the workflows that could run instead of building them.
 	ListOnly bool
 }
@@ -60,7 +66,7 @@ func (b *PipelineBuilder) Build() (items []*Item, errorsAndWarnings error) {
 	selected := SanitizePath(b.SelectedWorkflow)
 	if b.SelectedWorkflow != "" {
 		var err error
-		yamls, err = b.selectYamls(selected)
+		yamls, err = b.selectYamls(yamls, selected)
 		if err != nil {
 			return nil, err
 		}
@@ -69,6 +75,21 @@ func (b *PipelineBuilder) Build() (items []*Item, errorsAndWarnings error) {
 				Type:    pipeline_errors.PipelineErrorTypeGeneric,
 				Message: fmt.Sprintf("selected workflow '%s' does not exist", b.SelectedWorkflow),
 			}
+		}
+	}
+
+	var filter []string
+	if len(b.WorkflowFilter) > 0 {
+		for _, name := range b.WorkflowFilter {
+			filter = append(filter, SanitizePath(name))
+		}
+		var err error
+		yamls, err = b.selectYamls(yamls, filter...)
+		if err != nil {
+			return nil, err
+		}
+		if len(yamls) == 0 {
+			return nil, nil
 		}
 	}
 
@@ -118,6 +139,12 @@ func (b *PipelineBuilder) Build() (items []*Item, errorsAndWarnings error) {
 			Type:    pipeline_errors.PipelineErrorTypeGeneric,
 			Message: fmt.Sprintf("selected workflow '%s' does not match its conditions or misses a dependency", b.SelectedWorkflow),
 		})
+	}
+
+	if len(filter) > 0 && !slices.ContainsFunc(filter, func(name string) bool { return ContainsItemWithName(name, items) }) {
+		// only dependencies of the filtered workflows are left: nothing the
+		// filter asked for runs, so the pipeline must not pass
+		return nil, errorsAndWarnings
 	}
 
 	return items, errorsAndWarnings

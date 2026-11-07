@@ -100,3 +100,22 @@ func TestEnviron(t *testing.T) {
 	envs = m.Environ()
 	assert.Equal(t, "false", envs["CI_COMMIT_PULL_REQUEST_DRAFT"])
 }
+
+func TestEnvironPromote(t *testing.T) {
+	m := Metadata{
+		Curr: Pipeline{
+			Event:   EventPromote,
+			Promote: &Promote{Base: "b0", Cars: []string{"c1", "c2"}, Kind: "bisect"},
+			Commit:  Commit{Branch: "dev"},
+		},
+	}
+	envs := m.Environ()
+	assert.Equal(t, "promote", envs["CI_PIPELINE_EVENT"])
+	assert.Equal(t, "b0", envs["CI_PROMOTE_BASE"])
+	assert.Equal(t, "c1,c2", envs["CI_PROMOTE_CARS"])
+	assert.Equal(t, "bisect", envs["CI_PROMOTE_KIND"])
+
+	m.Curr = Pipeline{Event: EventPush}
+	_, ok := m.Environ()["CI_PROMOTE_KIND"]
+	assert.False(t, ok)
+}

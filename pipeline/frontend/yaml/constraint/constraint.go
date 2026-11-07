@@ -194,8 +194,8 @@ func (c *Constraint) match(m metadata.Metadata, global bool, env map[string]stri
 		c.Ref.Match(m.Curr.Commit.Ref) &&
 		c.Instance.Match(m.Sys.Host)
 
-	// changed files filter apply only for pull-request and push events
-	if m.Curr.Event.IsPull() || m.Curr.Event == metadata.EventPush {
+	// changed files filter apply only for pull-request, push and promote events
+	if m.Curr.Event.IsPull() || m.Curr.Event == metadata.EventPush || m.Curr.Event == metadata.EventPromote {
 		match = match && c.Path.Match(m.Curr.Commit.ChangedFiles, m.Curr.Commit.Message)
 	}
 

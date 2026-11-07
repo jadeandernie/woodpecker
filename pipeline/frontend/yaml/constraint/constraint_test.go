@@ -139,6 +139,18 @@ func TestConstraints(t *testing.T) {
 			want: false,
 		},
 		{
+			desc: "promote applies path filters",
+			conf: "{ event: promote, path: 'web/**' }",
+			with: metadata.Metadata{Curr: metadata.Pipeline{Event: metadata.EventPromote, Commit: metadata.Commit{Branch: "dev", ChangedFiles: []string{"server/main.go"}}}},
+			want: false,
+		},
+		{
+			desc: "promote matches changed files",
+			conf: "{ event: promote, path: 'web/**' }",
+			with: metadata.Metadata{Curr: metadata.Pipeline{Event: metadata.EventPromote, Commit: metadata.Commit{Branch: "dev", ChangedFiles: []string{"web/src/main.ts"}}}},
+			want: true,
+		},
+		{
 			desc: "filter cron by matching name",
 			conf: "{ event: cron, cron: job1 }",
 			with: metadata.Metadata{Curr: metadata.Pipeline{Event: metadata.EventCron, Cron: "job1"}},

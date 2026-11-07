@@ -70,19 +70,28 @@ func filterMissingDependencies(items []*Item) []*Item {
 	return items
 }
 
-// selectYamls returns the file of the named workflow and, transitively, the
-// files of the workflows it hard depends on.
-func (b *PipelineBuilder) selectYamls(name string) ([]*YamlFile, error) {
-	byName := make(map[string]*YamlFile, len(b.Yamls))
-	for _, y := range b.Yamls {
+// selectYamls returns the files of the named workflows and, transitively, the
+// files of the workflows they hard depend on. Names without a file are ignored.
+func (b *PipelineBuilder) selectYamls(files []*YamlFile, names ...string) ([]*YamlFile, error) {
+	byName := make(map[string]*YamlFile, len(files))
+	for _, y := range files {
 		byName[SanitizePath(y.Name)] = y
 	}
-	if _, ok := byName[name]; !ok {
+
+	wanted := map[string]struct{}{}
+	var queue []string
+	for _, name := range names {
+		if _, ok := byName[name]; !ok {
+			continue
+		}
+		if _, ok := wanted[name]; !ok {
+			wanted[name] = struct{}{}
+			queue = append(queue, name)
+		}
+	}
+	if len(queue) == 0 {
 		return nil, nil
 	}
-
-	wanted := map[string]struct{}{name: {}}
-	queue := []string{name}
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
@@ -105,7 +114,7 @@ func (b *PipelineBuilder) selectYamls(name string) ([]*YamlFile, error) {
 	}
 
 	kept := make([]*YamlFile, 0, len(wanted))
-	for _, y := range b.Yamls {
+	for _, y := range files {
 		if _, ok := wanted[SanitizePath(y.Name)]; ok {
 			kept = append(kept, y)
 		}

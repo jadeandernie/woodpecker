@@ -208,6 +208,13 @@ type Store interface {
 	// Org repos
 	OrgRepoList(*model.Org, *model.ListOptionsWithAll) ([]*model.Repo, error)
 
+	// Merge train
+	// TrainStateGet returns the merge train state of a repo, or
+	// types.ErrRecordNotExist if the train never ran.
+	TrainStateGet(repoID int64) (*model.TrainState, error)
+	// TrainStateSave creates or updates the merge train state of a repo.
+	TrainStateSave(*model.TrainState) error
+
 	// Store operations
 	Ping() error
 	Close() error

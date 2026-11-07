@@ -25,6 +25,7 @@ const (
 	EventDeploy       = "deployment"
 	EventCron         = "cron"
 	EventManual       = "manual"
+	EventPromote      = "promote"
 )
 
 // Status values.

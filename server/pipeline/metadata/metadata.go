@@ -139,6 +139,7 @@ func metadataPipelineFromModelPipeline(pipeline *model.Pipeline, includeParent b
 		RerunCount:  pipeline.RerunCount,
 		DeployTo:    pipeline.DeployTo,
 		DeployTask:  pipeline.DeployTask,
+		Promote:     metadataPromote(pipeline.Promote),
 		Commit: metadata.Commit{
 			Sha:       pipeline.Commit,
 			Ref:       pipeline.Ref,
@@ -166,4 +167,15 @@ func metadataPipelineFromModelPipeline(pipeline *model.Pipeline, includeParent b
 	}
 
 	return metadata
+}
+
+func metadataPromote(promote *model.PromoteInfo) *metadata.Promote {
+	if promote == nil {
+		return nil
+	}
+	return &metadata.Promote{
+		Base: promote.Base,
+		Cars: promote.Cars,
+		Kind: string(promote.Kind),
+	}
 }

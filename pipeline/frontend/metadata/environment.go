@@ -76,6 +76,11 @@ func (m *Metadata) Environ() map[string]string {
 	setNonEmptyEnvVar(params, "CI_PIPELINE_FORGE_URL", pipeline.ForgeURL)
 	setNonEmptyEnvVar(params, "CI_PIPELINE_DEPLOY_TARGET", pipeline.DeployTo)
 	setNonEmptyEnvVar(params, "CI_PIPELINE_DEPLOY_TASK", pipeline.DeployTask)
+	if pipeline.Promote != nil {
+		setNonEmptyEnvVar(params, "CI_PROMOTE_BASE", pipeline.Promote.Base)
+		setNonEmptyEnvVar(params, "CI_PROMOTE_CARS", strings.Join(pipeline.Promote.Cars, ","))
+		setNonEmptyEnvVar(params, "CI_PROMOTE_KIND", pipeline.Promote.Kind)
+	}
 	setNonEmptyEnvVar(params, "CI_PIPELINE_CREATED", strconv.FormatInt(pipeline.Created, 10))
 	setNonEmptyEnvVar(params, "CI_PIPELINE_STARTED", strconv.FormatInt(pipeline.Started, 10))
 	setNonEmptyEnvVar(params, "CI_PIPELINE_AUTHOR", pipeline.Author)

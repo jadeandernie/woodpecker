@@ -39,6 +39,7 @@ steps:
         - pull_request_metadata
         - tag
         - deployment
+        - promote
         - release
 
   when-ref:

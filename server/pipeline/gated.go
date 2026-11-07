@@ -31,7 +31,7 @@ func setApprovalState(repo *model.Repo, pipeline *model.Pipeline) {
 
 func needsApproval(repo *model.Repo, pipeline *model.Pipeline) bool {
 	// skip events created by woodpecker itself
-	if pipeline.Event == model.EventCron || pipeline.Event == model.EventManual {
+	if pipeline.Event == model.EventCron || pipeline.Event == model.EventManual || pipeline.Event == model.EventPromote {
 		return false
 	}
 

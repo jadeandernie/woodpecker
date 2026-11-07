@@ -118,6 +118,9 @@ func (s storage) deleteRepo(sess *xorm.Session, repo *model.Repo) error {
 	if _, err := sess.Where("repo_id = ?", repo.ID).Delete(new(model.Secret)); err != nil {
 		return err
 	}
+	if _, err := sess.Where("repo_id = ?", repo.ID).Delete(new(model.TrainState)); err != nil {
+		return err
+	}
 	if _, err := sess.Where("repo_id = ?", repo.ID).Delete(new(model.Redirection)); err != nil {
 		return err
 	}

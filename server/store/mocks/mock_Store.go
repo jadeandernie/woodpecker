@@ -6164,6 +6164,119 @@ func (_c *MockStore_TaskList_Call) RunAndReturn(run func() ([]*model.Task, error
 	return _c
 }
 
+// TrainStateGet provides a mock function for the type MockStore
+func (_mock *MockStore) TrainStateGet(repoID int64) (*model.TrainState, error) {
+	ret := _mock.Called(repoID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TrainStateGet")
+	}
+
+	var r0 *model.TrainState
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(int64) (*model.TrainState, error)); ok {
+		return returnFunc(repoID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int64) *model.TrainState); ok {
+		r0 = returnFunc(repoID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.TrainState)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(int64) error); ok {
+		r1 = returnFunc(repoID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TrainStateGet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TrainStateGet'
+type MockStore_TrainStateGet_Call struct {
+	*mock.Call
+}
+
+// TrainStateGet is a helper method to define mock.On call
+//   - repoID int64
+func (_e *MockStore_Expecter) TrainStateGet(repoID any) *MockStore_TrainStateGet_Call {
+	return &MockStore_TrainStateGet_Call{Call: _e.mock.On("TrainStateGet", repoID)}
+}
+
+func (_c *MockStore_TrainStateGet_Call) Run(run func(repoID int64)) *MockStore_TrainStateGet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int64
+		if args[0] != nil {
+			arg0 = args[0].(int64)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TrainStateGet_Call) Return(trainState *model.TrainState, err error) *MockStore_TrainStateGet_Call {
+	_c.Call.Return(trainState, err)
+	return _c
+}
+
+func (_c *MockStore_TrainStateGet_Call) RunAndReturn(run func(repoID int64) (*model.TrainState, error)) *MockStore_TrainStateGet_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TrainStateSave provides a mock function for the type MockStore
+func (_mock *MockStore) TrainStateSave(trainState *model.TrainState) error {
+	ret := _mock.Called(trainState)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TrainStateSave")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*model.TrainState) error); ok {
+		r0 = returnFunc(trainState)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_TrainStateSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TrainStateSave'
+type MockStore_TrainStateSave_Call struct {
+	*mock.Call
+}
+
+// TrainStateSave is a helper method to define mock.On call
+//   - trainState *model.TrainState
+func (_e *MockStore_Expecter) TrainStateSave(trainState any) *MockStore_TrainStateSave_Call {
+	return &MockStore_TrainStateSave_Call{Call: _e.mock.On("TrainStateSave", trainState)}
+}
+
+func (_c *MockStore_TrainStateSave_Call) Run(run func(trainState *model.TrainState)) *MockStore_TrainStateSave_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *model.TrainState
+		if args[0] != nil {
+			arg0 = args[0].(*model.TrainState)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TrainStateSave_Call) Return(err error) *MockStore_TrainStateSave_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_TrainStateSave_Call) RunAndReturn(run func(trainState *model.TrainState) error) *MockStore_TrainStateSave_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdatePipeline provides a mock function for the type MockStore
 func (_mock *MockStore) UpdatePipeline(pipeline *model.Pipeline) error {
 	ret := _mock.Called(pipeline)

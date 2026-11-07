@@ -123,6 +123,7 @@ func parsePipeline(ctx context.Context, forge forge.Forge, store store.Store, cu
 		},
 		DefaultLabels:    server.Config.Pipeline.DefaultWorkflowLabels,
 		SelectedWorkflow: currentPipeline.SelectedWorkflow,
+		WorkflowFilter:   currentPipeline.WorkflowFilter,
 		CompilerOptions: []compiler.Option{
 			compiler.WithLocal(false),
 			compiler.WithRegistry(registries...),

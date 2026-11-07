@@ -54,6 +54,7 @@ type (
 		ForgeURL    string   `json:"forge_url,omitempty"`
 		DeployTo    string   `json:"target,omitempty"`
 		DeployTask  string   `json:"task,omitempty"`
+		Promote     *Promote `json:"promote,omitempty"`
 		Commit      Commit   `json:"commit"`
 		Parent      int64    `json:"parent,omitempty"`
 		RerunCount  int64    `json:"rerun_count,omitempty"`
@@ -61,6 +62,17 @@ type (
 		Release     Release  `json:"release"`
 		Author      string   `json:"author,omitempty"`
 		Avatar      string   `json:"avatar,omitempty"`
+	}
+
+	// Promote defines runtime metadata for a merge train promote pipeline.
+	Promote struct {
+		// Base is the target branch commit the promote is tested against.
+		Base string `json:"base,omitempty"`
+		// Cars are the merge commits on the train branch under test.
+		Cars []string `json:"cars,omitempty"`
+		// Kind is "train" for a promote of the train branch head and "bisect"
+		// for a pipeline that narrows down a regression.
+		Kind string `json:"kind,omitempty"`
 	}
 
 	// Commit defines runtime metadata for a commit.

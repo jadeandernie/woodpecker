@@ -380,3 +380,19 @@ func TestCancelPreviousPipelines(t *testing.T) {
 		})
 	}
 }
+
+func TestSameEventAndContextPromote(t *testing.T) {
+	t.Parallel()
+
+	train := func(branch string) *model.Pipeline {
+		return &model.Pipeline{Event: model.EventPromote, Branch: branch, Promote: &model.PromoteInfo{Kind: model.PromoteKindTrain}}
+	}
+	bisect := &model.Pipeline{Event: model.EventPromote, Branch: "dev", Promote: &model.PromoteInfo{Kind: model.PromoteKindBisect}}
+
+	assert.True(t, sameEventAndContext(train("dev"), train("dev")))
+	assert.False(t, sameEventAndContext(train("dev"), train("next")))
+	assert.False(t, sameEventAndContext(train("dev"), bisect), "a train promote must not cancel a bisect run")
+	assert.False(t, sameEventAndContext(bisect, train("dev")))
+	assert.False(t, sameEventAndContext(bisect, bisect))
+	assert.False(t, sameEventAndContext(train("dev"), &model.Pipeline{Event: model.EventPromote, Branch: "dev"}))
+}

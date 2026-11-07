@@ -84,6 +84,12 @@ type Repo struct {
 	// name; the first matching rule wins, and names no rule matches use the
 	// built-in DefaultWorkflowGroup.
 	WorkflowGroups []*WorkflowGroupRule `json:"workflow_groups,omitempty" xorm:"json 'workflow_groups'"`
+	// Train configures the merge train; nil means the defaults with the train
+	// switched off.
+	Train *TrainSettings `json:"train,omitempty" xorm:"json 'train'"`
+	// TrainBotToken is an optional forge token the merge train writes with, so
+	// freezing the train branch can whitelist a bot instead of the repo user.
+	TrainBotToken string `json:"-" xorm:"TEXT 'train_bot_token'"`
 
 	// Rest API Only
 
@@ -178,6 +184,8 @@ type RepoPatch struct {
 	SecretExtensionEndpoint           *string                    `json:"secret_extension_endpoint,omitempty"`
 	SecretExtensionNetrc              *bool                      `json:"secret_extension_netrc,omitempty"`
 	WorkflowGroups                    *[]*WorkflowGroupRule      `json:"workflow_groups,omitempty"`
+	Train                             *TrainSettingsPatch        `json:"train,omitempty"`
+	TrainBotToken                     *string                    `json:"train_bot_token,omitempty"`
 } //	@name	RepoPatch
 
 type ForgeRemoteID string
