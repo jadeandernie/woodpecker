@@ -113,6 +113,9 @@ func (p *impl) Subscribe(c context.Context, t pubsub.Topics, r pubsub.Receiver) 
 // PublishPipelineEvent builds a pipeline state-change event and publishes it
 // to the repo topic (and the public topic for public repos).
 func (p *impl) PublishPipelineEvent(c context.Context, repo *model.Repo, pipeline *model.Pipeline) error {
+	// live updates carry the workflow groups like the pipeline API does
+	model.AssignWorkflowGroups(repo, pipeline.Workflows)
+
 	data, err := json.Marshal(model.Event{
 		Repo:     *repo,
 		Pipeline: *pipeline,

@@ -191,6 +191,10 @@ type Store interface {
 	WorkflowLoad(int64) (*model.Workflow, error)
 	WorkflowByStep(*model.Step) (*model.Workflow, error)
 	WorkflowUpdate(*model.Workflow) error
+	// WorkflowListByPipelines lists the workflows (without steps) of many pipelines in one query.
+	WorkflowListByPipelines(pipelineIDs []int64) ([]*model.Workflow, error)
+	// WorkflowMemoryPeaks returns the highest step memory peak of each workflow of many pipelines.
+	WorkflowMemoryPeaks(pipelineIDs []int64) ([]*model.WorkflowMemoryPeak, error)
 
 	// Org
 	OrgCreate(*model.Org) error

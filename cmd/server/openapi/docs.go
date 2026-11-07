@@ -276,6 +276,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/badges/{repo_id}/pipeline": {
+            "get": {
+                "description": "Redirects to the pipeline graph of the latest pipeline of the branch (the one the status badge shows),\nor to the repository when it has none. Use it as the link of the status badge.",
+                "tags": [
+                    "Badges"
+                ],
+                "summary": "Open the pipeline a status badge shows",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "the repository id",
+                        "name": "repo_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "the branch, default the repository's default branch",
+                        "name": "branch",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "the events to consider (comma separated), default push",
+                        "name": "events",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Found"
+                    }
+                }
+            }
+        },
         "/badges/{repo_id}/status.svg": {
             "get": {
                 "produces": [
@@ -4024,6 +4059,62 @@ const docTemplate = `{
                 }
             }
         },
+        "/repos/{repo_id}/stats": {
+            "get": {
+                "description": "Lists the newest pipelines of a branch, newest first, each with its workflows' group, subgroup, state,\ntiming, dependencies and memory peak, for the repository insights views.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Repositories"
+                ],
+                "summary": "Get the pipeline history of a repository with workflow groups, timing and memory",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003cpersonal access token\u003e",
+                        "description": "Insert your personal access token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "the repository id",
+                        "name": "repo_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "the branch; missing or empty for the default branch, '*' for all branches",
+                        "name": "branch",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "filter pipelines by webhook events (comma separated)",
+                        "name": "event",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "the number of pipelines, at most 200",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/RepoStats"
+                        }
+                    }
+                }
+            }
+        },
         "/repos/{repo_id}/workflows": {
             "get": {
                 "description": "Fetches the pipeline config of the branch head and lists the workflows that run on the manual event.",
@@ -5565,6 +5656,13 @@ const docTemplate = `{
                 },
                 "visibility": {
                     "$ref": "#/definitions/RepoVisibility"
+                },
+                "workflow_groups": {
+                    "description": "WorkflowGroups sorts the repo's workflows into groups and subgroups by\nname; the first matching rule wins, and names no rule matches use the\nbuilt-in DefaultWorkflowGroup.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/WorkflowGroupRule"
+                    }
                 }
             }
         },
@@ -5693,6 +5791,13 @@ const docTemplate = `{
                 },
                 "visibility": {
                     "$ref": "#/definitions/RepoVisibility"
+                },
+                "workflow_groups": {
+                    "description": "WorkflowGroups sorts the repo's workflows into groups and subgroups by\nname; the first matching rule wins, and names no rule matches use the\nbuilt-in DefaultWorkflowGroup.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/WorkflowGroupRule"
+                    }
                 }
             }
         },
@@ -5764,6 +5869,27 @@ const docTemplate = `{
                 },
                 "visibility": {
                     "type": "string"
+                },
+                "workflow_groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/WorkflowGroupRule"
+                    }
+                }
+            }
+        },
+        "RepoStats": {
+            "type": "object",
+            "properties": {
+                "branch": {
+                    "description": "Branch is the branch the history is for, \"\" for all branches.",
+                    "type": "string"
+                },
+                "pipelines": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/StatsPipeline"
+                    }
                 }
             }
         },
@@ -5837,6 +5963,87 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "StatsPipeline": {
+            "type": "object",
+            "properties": {
+                "branch": {
+                    "type": "string"
+                },
+                "commit": {
+                    "type": "string"
+                },
+                "created": {
+                    "type": "integer"
+                },
+                "event": {
+                    "type": "string"
+                },
+                "finished": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "memory_peak": {
+                    "description": "MemoryPeak is the highest memory use of any step in bytes, 0 when not measured.",
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "started": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/StatusValue"
+                },
+                "workflows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/StatsWorkflow"
+                    }
+                }
+            }
+        },
+        "StatsWorkflow": {
+            "type": "object",
+            "properties": {
+                "depends_on": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "finished": {
+                    "type": "integer"
+                },
+                "group": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "memory_peak": {
+                    "description": "MemoryPeak is the highest memory use of the workflow's steps in bytes, 0 when not measured.",
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "started": {
+                    "type": "integer"
+                },
+                "state": {
+                    "$ref": "#/definitions/StatusValue"
+                },
+                "subgroup": {
                     "type": "string"
                 }
             }
@@ -5915,6 +6122,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "id": {
+                    "type": "integer"
+                },
+                "memory_peak": {
+                    "description": "MemoryPeak is the highest memory use of the step's container in bytes,\n0 when the agent's backend did not report it.",
                     "type": "integer"
                 },
                 "name": {
@@ -6089,6 +6300,20 @@ const docTemplate = `{
                 "EventCron",
                 "EventManual"
             ]
+        },
+        "WorkflowGroupRule": {
+            "type": "object",
+            "properties": {
+                "group": {
+                    "type": "string"
+                },
+                "pattern": {
+                    "type": "string"
+                },
+                "subgroup": {
+                    "type": "string"
+                }
+            }
         },
         "WorkflowInfo": {
             "type": "object",
@@ -6619,6 +6844,10 @@ const docTemplate = `{
                 "finished": {
                     "type": "integer"
                 },
+                "group": {
+                    "description": "Group and Subgroup sort the workflow by its name and the repo's workflow\ngroup rules, e.g. \"deploy\" and \"knowledge\" for\ndeploy-service-knowledge-store-rpc. They are derived, not stored.",
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -6639,6 +6868,9 @@ const docTemplate = `{
                 },
                 "state": {
                     "$ref": "#/definitions/StatusValue"
+                },
+                "subgroup": {
+                    "type": "string"
                 }
             }
         }

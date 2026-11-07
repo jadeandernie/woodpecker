@@ -78,6 +78,16 @@ type (
 		CancelPreviousPipelineKeepRunning bool                 `json:"cancel_previous_pipeline_keep_running"`
 		CancelPreviousPipelineSquash      bool                 `json:"cancel_previous_pipeline_squash"`
 		NetrcTrustedPlugins               []string             `json:"netrc_trusted"`
+		WorkflowGroups                    []*WorkflowGroupRule `json:"workflow_groups,omitempty"`
+	}
+
+	// WorkflowGroupRule sorts the workflows whose name matches Pattern (a Go
+	// regular expression) into a group and subgroup. Group and Subgroup are
+	// templates expanded with the match, so they may use $1 or ${name}.
+	WorkflowGroupRule struct {
+		Pattern  string `json:"pattern"`
+		Group    string `json:"group"`
+		Subgroup string `json:"subgroup,omitempty"`
 	}
 
 	TrustedConfigurationPatch struct {
@@ -97,6 +107,8 @@ type (
 		Visibility      *string                    `json:"visibility"`
 		AllowPull       *bool                      `json:"allow_pr,omitempty"`
 		PipelineCounter *int                       `json:"pipeline_counter,omitempty"`
+		// WorkflowGroups replaces the repo's workflow group rules; an empty list uses the built-in grouping.
+		WorkflowGroups *[]*WorkflowGroupRule `json:"workflow_groups,omitempty"`
 	}
 
 	PipelineError struct {
@@ -153,6 +165,12 @@ type (
 		Platform string            `json:"platform,omitempty"`
 		Environ  map[string]string `json:"environ,omitempty"`
 		Children []*Step           `json:"children,omitempty"`
+		// DependsOn lists the workflows this one waits for.
+		DependsOn []string `json:"depends_on,omitempty"`
+		// Group (build, test, deploy, other) and Subgroup (the subject, e.g.
+		// knowledge) sort the workflow by its name and the repo's rules.
+		Group    string `json:"group,omitempty"`
+		Subgroup string `json:"subgroup,omitempty"`
 	}
 
 	// Step represents a process in the pipeline.
@@ -167,6 +185,44 @@ type (
 		Started  int64    `json:"started,omitempty"`
 		Stopped  int64    `json:"finished,omitempty"`
 		Type     StepType `json:"type,omitempty"`
+		// MemoryPeak is the highest memory use of the step's container in bytes, 0 when not measured.
+		MemoryPeak int64 `json:"memory_peak,omitempty"`
+	}
+
+	// RepoStats is the pipeline history of a repo, newest first.
+	RepoStats struct {
+		// Branch is the branch the history is for, "" for all branches.
+		Branch    string           `json:"branch"`
+		Pipelines []*StatsPipeline `json:"pipelines"`
+	}
+
+	// StatsPipeline is one pipeline in the repo stats history.
+	StatsPipeline struct {
+		ID         int64            `json:"id"`
+		Number     int64            `json:"number"`
+		Status     string           `json:"status"`
+		Event      string           `json:"event"`
+		Branch     string           `json:"branch"`
+		Commit     string           `json:"commit"`
+		Message    string           `json:"message"`
+		Created    int64            `json:"created"`
+		Started    int64            `json:"started"`
+		Finished   int64            `json:"finished"`
+		MemoryPeak int64            `json:"memory_peak"`
+		Workflows  []*StatsWorkflow `json:"workflows"`
+	}
+
+	// StatsWorkflow is one workflow of a pipeline in the repo stats history.
+	StatsWorkflow struct {
+		ID         int64    `json:"id"`
+		Name       string   `json:"name"`
+		Group      string   `json:"group"`
+		Subgroup   string   `json:"subgroup"`
+		State      string   `json:"state"`
+		Started    int64    `json:"started"`
+		Finished   int64    `json:"finished"`
+		DependsOn  []string `json:"depends_on,omitempty"`
+		MemoryPeak int64    `json:"memory_peak"`
 	}
 
 	// Registry represents a docker registry with credentials.

@@ -84,6 +84,10 @@ type Client interface {
 	// the specified repository.
 	PipelineList(repoID int64, opt PipelineListOptions) ([]*Pipeline, error)
 
+	// RepoStats returns the pipeline history of the specified repository
+	// with each workflow's group, timing and memory peak.
+	RepoStats(repoID int64, opt RepoStatsOptions) (*RepoStats, error)
+
 	PipelineDelete(repoID, pipeline int64) error
 
 	// PipelineQueue returns a list of enqueued pipelines.

@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -35,6 +34,47 @@ import (
 	"go.woodpecker-ci.org/woodpecker/v3/server/store/types"
 )
 
+// badgeRepo looks up the repo of a badge request by id or by owner and name.
+// On failure it writes the error response and returns false.
+func badgeRepo(c *gin.Context, _store store.Store) (*model.Repo, bool) {
+	var repo *model.Repo
+	var err error
+
+	if c.Param("repo_name") != "" {
+		repo, err = _store.GetRepoName(c.Param("repo_id_or_owner") + "/" + c.Param("repo_name"))
+	} else {
+		var repoID int64
+		repoID, err = strconv.ParseInt(c.Param("repo_id_or_owner"), 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return nil, false
+		}
+		repo, err = _store.GetRepo(repoID)
+	}
+
+	if err != nil {
+		handleDBError(c, err)
+		return nil, false
+	}
+	return repo, true
+}
+
+// badgeEvents parses the events query of a badge request, a comma separated
+// list that defaults to push. On failure it writes the error response and
+// returns false.
+func badgeEvents(c *gin.Context) ([]model.WebhookEvent, bool) {
+	eventsQuery := c.Query("events")
+	if len(eventsQuery) == 0 {
+		return []model.WebhookEvent{model.EventPush}, true
+	}
+	events, err := parseEventList(eventsQuery)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusBadRequest, err)
+		return nil, false
+	}
+	return events, true
+}
+
 // GetBadge
 //
 //	@Summary	Get status of pipeline as SVG badge
@@ -46,23 +86,8 @@ import (
 func GetBadge(c *gin.Context) {
 	_store := store.FromContext(c)
 
-	var repo *model.Repo
-	var err error
-
-	if c.Param("repo_name") != "" {
-		repo, err = _store.GetRepoName(c.Param("repo_id_or_owner") + "/" + c.Param("repo_name"))
-	} else {
-		var repoID int64
-		repoID, err = strconv.ParseInt(c.Param("repo_id_or_owner"), 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-		repo, err = _store.GetRepo(repoID)
-	}
-
-	if err != nil {
-		handleDBError(c, err)
+	repo, ok := badgeRepo(c, _store)
+	if !ok {
 		return
 	}
 
@@ -74,24 +99,9 @@ func GetBadge(c *gin.Context) {
 		branch = repo.Branch
 	}
 
-	// Events to lookup, multiple separated by comma
-	var events []model.WebhookEvent
-	eventsQuery := c.Query("events")
-	// If none given, fallback to default "push"
-	if len(eventsQuery) == 0 {
-		events = []model.WebhookEvent{model.EventPush}
-	} else {
-		strEvents := strings.Split(eventsQuery, ",")
-		events = make([]model.WebhookEvent, len(strEvents))
-		for i, strEvent := range strEvents {
-			event := model.WebhookEvent(strEvent)
-			if err := event.Validate(); err == nil {
-				events[i] = event
-			} else {
-				_ = c.AbortWithError(http.StatusBadRequest, err)
-				return
-			}
-		}
+	events, ok := badgeEvents(c)
+	if !ok {
+		return
 	}
 
 	name := "pipeline"
@@ -154,6 +164,47 @@ func GetBadge(c *gin.Context) {
 	}
 }
 
+// GetBadgePipeline
+//
+//	@Summary		Open the pipeline a status badge shows
+//	@Description	Redirects to the pipeline graph of the latest pipeline of the branch (the one the status badge shows),
+//	@Description	or to the repository when it has none. Use it as the link of the status badge.
+//	@Router			/badges/{repo_id}/pipeline [get]
+//	@Success		302
+//	@Tags			Badges
+//	@Param			repo_id	path	int		true	"the repository id"
+//	@Param			branch	query	string	false	"the branch, default the repository's default branch"
+//	@Param			events	query	string	false	"the events to consider (comma separated), default push"
+func GetBadgePipeline(c *gin.Context) {
+	_store := store.FromContext(c)
+
+	repo, ok := badgeRepo(c, _store)
+	if !ok {
+		return
+	}
+
+	branch := c.Query("branch")
+	if len(branch) == 0 {
+		branch = repo.Branch
+	}
+
+	events, ok := badgeEvents(c)
+	if !ok {
+		return
+	}
+
+	target := fmt.Sprintf("%s/repos/%d", server.Config.Server.RootPath, repo.ID)
+	pl, err := _store.GetPipelineBadge(repo, branch, events)
+	switch {
+	case err == nil:
+		target = fmt.Sprintf("%s/repos/%d/pipeline/%d/graph", server.Config.Server.RootPath, repo.ID, pl.Number)
+	case !errors.Is(err, types.ErrRecordNotExist):
+		log.Warn().Err(err).Msg("could not get last pipeline for badge link")
+	}
+
+	c.Redirect(http.StatusFound, target)
+}
+
 // GetCC
 //
 //	@Summary		Provide pipeline status information to the CCMenu tool
@@ -167,23 +218,8 @@ func GetBadge(c *gin.Context) {
 //	@Param			repo_id	path	int	true	"the repository id"
 func GetCC(c *gin.Context) {
 	_store := store.FromContext(c)
-	var repo *model.Repo
-	var err error
-
-	if c.Param("repo_name") != "" {
-		repo, err = _store.GetRepoName(c.Param("repo_id_or_owner") + "/" + c.Param("repo_name"))
-	} else {
-		var repoID int64
-		repoID, err = strconv.ParseInt(c.Param("repo_id_or_owner"), 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-		repo, err = _store.GetRepo(repoID)
-	}
-
-	if err != nil {
-		handleDBError(c, err)
+	repo, ok := badgeRepo(c, _store)
+	if !ok {
 		return
 	}
 

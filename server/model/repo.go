@@ -80,6 +80,10 @@ type Repo struct {
 	RegistryExtensionNetrc            bool                 `json:"registry_extension_netrc"        xorm:"DEFAULT FALSE 'registry_extension_netrc'"`
 	SecretExtensionEndpoint           string               `json:"secret_extension_endpoint"       xorm:"varchar(500) 'secret_extension_endpoint'"`
 	SecretExtensionNetrc              bool                 `json:"secret_extension_netrc"          xorm:"DEFAULT FALSE 'secret_extension_netrc'"`
+	// WorkflowGroups sorts the repo's workflows into groups and subgroups by
+	// name; the first matching rule wins, and names no rule matches use the
+	// built-in DefaultWorkflowGroup.
+	WorkflowGroups []*WorkflowGroupRule `json:"workflow_groups,omitempty" xorm:"json 'workflow_groups'"`
 
 	// Rest API Only
 
@@ -173,6 +177,7 @@ type RepoPatch struct {
 	RegistryExtensionNetrc            *bool                      `json:"registry_extension_netrc"`
 	SecretExtensionEndpoint           *string                    `json:"secret_extension_endpoint,omitempty"`
 	SecretExtensionNetrc              *bool                      `json:"secret_extension_netrc,omitempty"`
+	WorkflowGroups                    *[]*WorkflowGroupRule      `json:"workflow_groups,omitempty"`
 } //	@name	RepoPatch
 
 type ForgeRemoteID string

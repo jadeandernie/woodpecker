@@ -30,6 +30,7 @@ const (
 	pathChown          = "%s/api/repos/%d/chown"
 	pathRepair         = "%s/api/repos/%d/repair"
 	pathPipelines      = "%s/api/repos/%d/pipelines"
+	pathRepoStats      = "%s/api/repos/%d/stats"
 	pathPipeline       = "%s/api/repos/%d/pipelines/%v"
 	pathPipelineLogs   = "%s/api/repos/%d/logs/%d"
 	pathStepLogs       = "%s/api/repos/%d/logs/%d/%d"
@@ -52,6 +53,28 @@ type PipelineListOptions struct {
 	Events      []string
 	RefContains string
 	Status      string
+}
+
+// RepoStatsOptions selects the pipelines of the repo stats history.
+type RepoStatsOptions struct {
+	Branch string   // the branch; empty for the default branch, "*" for all branches
+	Events []string // only pipelines of these events
+	Limit  int      // the number of pipelines, 0 for the server default (50), at most 200
+}
+
+// QueryEncode returns the URL query parameters for the RepoStatsOptions.
+func (opt *RepoStatsOptions) QueryEncode() string {
+	query := make(url.Values)
+	if opt.Branch != "" {
+		query.Add("branch", opt.Branch)
+	}
+	if len(opt.Events) > 0 {
+		query.Add("event", strings.Join(opt.Events, ","))
+	}
+	if opt.Limit > 0 {
+		query.Add("limit", strconv.Itoa(opt.Limit))
+	}
+	return query.Encode()
 }
 
 type CronListOptions struct {
@@ -350,6 +373,18 @@ func (c *client) PipelineList(repoID int64, opt PipelineListOptions) ([]*Pipelin
 	uri.RawQuery = opt.QueryEncode()
 	err := c.get(uri.String(), &out)
 	return out, err
+}
+
+// RepoStats returns the pipeline history of the specified repository with
+// each workflow's group, timing and memory peak.
+func (c *client) RepoStats(repoID int64, opt RepoStatsOptions) (*RepoStats, error) {
+	out := new(RepoStats)
+	uri, _ := url.Parse(fmt.Sprintf(pathRepoStats, c.addr, repoID))
+	uri.RawQuery = opt.QueryEncode()
+	if err := c.get(uri.String(), out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // PipelineDelete deletes a pipeline by the specified repository ID and pipeline ID.

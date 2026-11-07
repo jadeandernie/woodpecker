@@ -85,6 +85,7 @@ func CreatePipeline(c *gin.Context) {
 	}
 
 	if pl != nil {
+		model.AssignWorkflowGroups(repo, pl.Workflows)
 		c.JSON(http.StatusOK, pl.ToAPIModel())
 	} else {
 		c.Status(http.StatusNoContent)
@@ -184,15 +185,10 @@ func GetPipelines(c *gin.Context) {
 	}
 
 	if events := c.Query("event"); events != "" {
-		eventList := strings.Split(events, ",")
-		wel := make(model.WebhookEventList, 0, len(eventList))
-		for _, event := range eventList {
-			we := model.WebhookEvent(event)
-			if err := we.Validate(); err != nil {
-				_ = c.AbortWithError(http.StatusBadRequest, err)
-				return
-			}
-			wel = append(wel, we)
+		wel, err := parseEventList(events)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusBadRequest, err)
+			return
 		}
 		filter.Events = wel
 	}
@@ -320,6 +316,7 @@ func GetPipeline(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
+	model.AssignWorkflowGroups(repo, pl.Workflows)
 
 	c.JSON(http.StatusOK, pl.ToAPIModel())
 }
@@ -339,6 +336,7 @@ func GetPipelineLastByBranch(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
+	model.AssignWorkflowGroups(repo, pl.Workflows)
 	c.JSON(http.StatusOK, pl.ToAPIModel())
 }
 
@@ -555,6 +553,7 @@ func PostApproval(c *gin.Context) {
 	if err != nil {
 		handlePipelineErr(c, err)
 	} else {
+		model.AssignWorkflowGroups(repo, newPipeline.Workflows)
 		c.JSON(http.StatusOK, newPipeline.ToAPIModel())
 	}
 }
@@ -581,6 +580,7 @@ func PostDecline(c *gin.Context) {
 	if err != nil {
 		handlePipelineErr(c, err)
 	} else {
+		model.AssignWorkflowGroups(repo, pl.Workflows)
 		c.JSON(http.StatusOK, pl.ToAPIModel())
 	}
 }
@@ -683,6 +683,7 @@ func PostPipeline(c *gin.Context) {
 	if err != nil {
 		handlePipelineErr(c, err)
 	} else {
+		model.AssignWorkflowGroups(repo, newPipeline.Workflows)
 		c.JSON(http.StatusOK, newPipeline.ToAPIModel())
 	}
 }

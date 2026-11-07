@@ -116,6 +116,7 @@ func apiRoutes(e *gin.RouterGroup) {
 					repo.GET("/pull_requests", api.GetRepoPullRequests)
 
 					repo.GET("/pipelines", api.GetPipelines)
+					repo.GET("/stats", api.GetRepoStats)
 					repo.POST("/pipelines", session.MustPush, api.CreatePipeline)
 					repo.GET("/workflows", session.MustPush, api.GetRepoWorkflows)
 					repo.DELETE("/pipelines/:pipeline_number", session.MustRepoAdmin(), session.SetPipeline(), api.DeletePipeline)
@@ -172,12 +173,14 @@ func apiRoutes(e *gin.RouterGroup) {
 		{
 			badges.GET("/status.svg", api.GetBadge)
 			badges.GET("/cc.xml", api.GetCC)
+			badges.GET("/pipeline", api.GetBadgePipeline)
 		}
 
 		_badges := apiBase.Group("/badges/:repo_id_or_owner/:repo_name")
 		{
 			_badges.GET("/status.svg", api.GetBadge)
 			_badges.GET("/cc.xml", api.GetCC)
+			_badges.GET("/pipeline", api.GetBadgePipeline)
 		}
 
 		pipelines := apiBase.Group("/pipelines")

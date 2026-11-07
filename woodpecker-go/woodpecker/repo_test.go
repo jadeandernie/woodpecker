@@ -456,3 +456,49 @@ func TestClientRepoMove(t *testing.T) {
 		})
 	}
 }
+
+func TestRepoStats(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, http.MethodGet, r.Method)
+			assert.Equal(t, "/api/repos/123/stats?branch=%2A&event=push%2Ccron&limit=20", r.URL.RequestURI())
+			_, err := fmt.Fprint(w, `{"branch":"","pipelines":[{"id":7,"number":3,"memory_peak":400,"workflows":[{"id":1,"name":"svc-knowledge","group":"build","subgroup":"knowledge","depends_on":["gate-lint"],"memory_peak":400}]}]}`)
+			assert.NoError(t, err)
+		}))
+		defer ts.Close()
+
+		stats, err := NewClient(ts.URL, http.DefaultClient).RepoStats(123, RepoStatsOptions{Branch: "*", Events: []string{"push", "cron"}, Limit: 20})
+		assert.NoError(t, err)
+		if assert.Len(t, stats.Pipelines, 1) && assert.Len(t, stats.Pipelines[0].Workflows, 1) {
+			assert.EqualValues(t, 400, stats.Pipelines[0].MemoryPeak)
+			wf := stats.Pipelines[0].Workflows[0]
+			assert.Equal(t, "build", wf.Group)
+			assert.Equal(t, "knowledge", wf.Subgroup)
+			assert.Equal(t, []string{"gate-lint"}, wf.DependsOn)
+		}
+	})
+
+	t.Run("no options", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/api/repos/123/stats", r.URL.RequestURI())
+			_, err := fmt.Fprint(w, `{"branch":"main","pipelines":[]}`)
+			assert.NoError(t, err)
+		}))
+		defer ts.Close()
+
+		stats, err := NewClient(ts.URL, http.DefaultClient).RepoStats(123, RepoStatsOptions{})
+		assert.NoError(t, err)
+		assert.Equal(t, "main", stats.Branch)
+	})
+
+	t.Run("server error", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer ts.Close()
+
+		stats, err := NewClient(ts.URL, http.DefaultClient).RepoStats(123, RepoStatsOptions{})
+		assert.Error(t, err)
+		assert.Nil(t, stats)
+	})
+}

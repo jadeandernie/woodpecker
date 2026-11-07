@@ -137,6 +137,36 @@ func (s storage) WorkflowByStep(step *model.Step) (*model.Workflow, error) {
 		Get(workflow))
 }
 
+// WorkflowListByPipelines lists the workflows of the given pipelines, without
+// their steps, ordered by pipeline id and pid, in one query.
+func (s storage) WorkflowListByPipelines(pipelineIDs []int64) ([]*model.Workflow, error) {
+	wfList := make([]*model.Workflow, 0, len(pipelineIDs))
+	if len(pipelineIDs) == 0 {
+		return wfList, nil
+	}
+	return wfList, s.engine.
+		In("pipeline_id", pipelineIDs).
+		OrderBy("pipeline_id, pid").
+		Find(&wfList)
+}
+
+// WorkflowMemoryPeaks returns the highest step memory peak of each workflow of
+// the given pipelines, in one query. Workflows none of whose steps reported a
+// memory peak are left out.
+func (s storage) WorkflowMemoryPeaks(pipelineIDs []int64) ([]*model.WorkflowMemoryPeak, error) {
+	peaks := make([]*model.WorkflowMemoryPeak, 0, len(pipelineIDs))
+	if len(pipelineIDs) == 0 {
+		return peaks, nil
+	}
+	return peaks, s.engine.
+		Table("steps").
+		Select("pipeline_id, ppid, MAX(memory_peak) AS memory_peak").
+		In("pipeline_id", pipelineIDs).
+		And("memory_peak > 0").
+		GroupBy("pipeline_id, ppid").
+		Find(&peaks)
+}
+
 func (s storage) WorkflowUpdate(workflow *model.Workflow) error {
 	return retryWrite(func() error {
 		return wrapUpdate(s.engine.ID(workflow.ID).AllCols().Update(workflow))

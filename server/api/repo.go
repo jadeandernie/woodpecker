@@ -335,6 +335,13 @@ func PatchRepo(c *gin.Context) {
 	if in.SecretExtensionNetrc != nil {
 		repo.SecretExtensionNetrc = *in.SecretExtensionNetrc
 	}
+	if in.WorkflowGroups != nil {
+		if err := model.ValidateWorkflowGroupRules(*in.WorkflowGroups); err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+		repo.WorkflowGroups = *in.WorkflowGroups
+	}
 
 	err := _store.UpdateRepo(repo)
 	if err != nil {

@@ -96,3 +96,34 @@ With **Squash pending pipelines** enabled, a new pipeline only cancels previous 
 - Pipelines with unknown changes (no changed files, e.g. cron or manual pipelines and pushes where the forge reported no files) are only squashed with each other, as the `on_empty` setting of a path filter decides for them.
 - If the new pipeline fails to start (e.g. its configuration cannot be loaded, or all its workflows are filtered out), the previous pipelines are not canceled.
 - To also run at most one pipeline per branch at a time, limit the workflows' [concurrency](./20-workflow-syntax.md#concurrency) or use a single agent.
+
+## Workflow groups
+
+The pipeline view and the repository insights sort the workflows of a pipeline into a **group** (the stage: `build`, `test`, `deploy` or `other`) and a **subgroup** (the subject the workflow is about, e.g. `knowledge` or `tensor`). This shows, for example, that everything about `knowledge` failed in its last runs while the other subjects passed.
+
+By default the group and subgroup come from the workflow name. The name is split on `-`, `_`, `/` and `.`, and its first part is the stage:
+
+| First part of the name                                                                         | Group    |
+| ---------------------------------------------------------------------------------------------- | -------- |
+| `build`, `module`, `service`, `svc`, `worker`, `operators`, `compile`, `lint`, `image`, `docker` | `build`  |
+| `test`, `gate`, `check`, `nightly`, `acceptance`, `e2e`, `integration`, `unit`, `verify`         | `test`   |
+| `deploy`, `publish`, `release`, `staging`, `promote`, `rollout`                                  | `deploy` |
+| anything else                                                                                    | `other`  |
+
+The subgroup is the first later part that is neither a stage word nor one of `service`, `svc`, `lib`, `module`, `rpc`, `store`, `search`, `worker`, `app`, `operators`, `etl` or `ci`, or empty if there is none. So `svc-knowledge` is `build`/`knowledge`, `test-service-tensor-worker` is `test`/`tensor`, `deploy-service-knowledge-store-rpc` is `deploy`/`knowledge`, `gate-lint` is `test` without a subgroup and `staging` is `deploy` without a subgroup.
+
+If your workflow names follow another scheme, set rules in the repository's `workflow_groups` setting, e.g. with `PATCH /api/repos/<repo-id>`:
+
+```json
+{
+  "workflow_groups": [
+    { "pattern": "^(?P<subject>[a-z]+)-unit$", "group": "test", "subgroup": "${subject}" },
+    { "pattern": "^ship-(\\w+)", "group": "deploy", "subgroup": "$1" },
+    { "pattern": "^docs$", "group": "other" }
+  ]
+}
+```
+
+Each rule's `pattern` is a [Go regular expression](https://pkg.go.dev/regexp/syntax) matched against the workflow name; `group` and `subgroup` may use the pattern's groups as `$1` or `${name}`. The first matching rule wins, and names no rule matches fall back to the built-in grouping above. Patterns that are not valid regular expressions are rejected. Send an empty list to remove the rules.
+
+The grouped history of a repository, newest pipeline first, is available from `GET /api/repos/<repo-id>/stats`. It returns each pipeline's status, timing and peak memory use with its workflows' group, subgroup, state, timing, dependencies and peak memory use (the highest of their steps, `0` when the agent did not measure it). Query parameters: `branch` (default: the default branch; `*` for all branches), `event` (comma separated events) and `limit` (default 50, at most 200).

@@ -6503,6 +6503,68 @@ func (_c *MockStore_WorkflowGetTree_Call) RunAndReturn(run func(pipeline *model.
 	return _c
 }
 
+// WorkflowListByPipelines provides a mock function for the type MockStore
+func (_mock *MockStore) WorkflowListByPipelines(pipelineIDs []int64) ([]*model.Workflow, error) {
+	ret := _mock.Called(pipelineIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for WorkflowListByPipelines")
+	}
+
+	var r0 []*model.Workflow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func([]int64) ([]*model.Workflow, error)); ok {
+		return returnFunc(pipelineIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func([]int64) []*model.Workflow); ok {
+		r0 = returnFunc(pipelineIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.Workflow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func([]int64) error); ok {
+		r1 = returnFunc(pipelineIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_WorkflowListByPipelines_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WorkflowListByPipelines'
+type MockStore_WorkflowListByPipelines_Call struct {
+	*mock.Call
+}
+
+// WorkflowListByPipelines is a helper method to define mock.On call
+//   - pipelineIDs []int64
+func (_e *MockStore_Expecter) WorkflowListByPipelines(pipelineIDs any) *MockStore_WorkflowListByPipelines_Call {
+	return &MockStore_WorkflowListByPipelines_Call{Call: _e.mock.On("WorkflowListByPipelines", pipelineIDs)}
+}
+
+func (_c *MockStore_WorkflowListByPipelines_Call) Run(run func(pipelineIDs []int64)) *MockStore_WorkflowListByPipelines_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []int64
+		if args[0] != nil {
+			arg0 = args[0].([]int64)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_WorkflowListByPipelines_Call) Return(workflows []*model.Workflow, err error) *MockStore_WorkflowListByPipelines_Call {
+	_c.Call.Return(workflows, err)
+	return _c
+}
+
+func (_c *MockStore_WorkflowListByPipelines_Call) RunAndReturn(run func(pipelineIDs []int64) ([]*model.Workflow, error)) *MockStore_WorkflowListByPipelines_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // WorkflowLoad provides a mock function for the type MockStore
 func (_mock *MockStore) WorkflowLoad(n int64) (*model.Workflow, error) {
 	ret := _mock.Called(n)
@@ -6561,6 +6623,68 @@ func (_c *MockStore_WorkflowLoad_Call) Return(workflow *model.Workflow, err erro
 }
 
 func (_c *MockStore_WorkflowLoad_Call) RunAndReturn(run func(n int64) (*model.Workflow, error)) *MockStore_WorkflowLoad_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// WorkflowMemoryPeaks provides a mock function for the type MockStore
+func (_mock *MockStore) WorkflowMemoryPeaks(pipelineIDs []int64) ([]*model.WorkflowMemoryPeak, error) {
+	ret := _mock.Called(pipelineIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for WorkflowMemoryPeaks")
+	}
+
+	var r0 []*model.WorkflowMemoryPeak
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func([]int64) ([]*model.WorkflowMemoryPeak, error)); ok {
+		return returnFunc(pipelineIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func([]int64) []*model.WorkflowMemoryPeak); ok {
+		r0 = returnFunc(pipelineIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.WorkflowMemoryPeak)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func([]int64) error); ok {
+		r1 = returnFunc(pipelineIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_WorkflowMemoryPeaks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WorkflowMemoryPeaks'
+type MockStore_WorkflowMemoryPeaks_Call struct {
+	*mock.Call
+}
+
+// WorkflowMemoryPeaks is a helper method to define mock.On call
+//   - pipelineIDs []int64
+func (_e *MockStore_Expecter) WorkflowMemoryPeaks(pipelineIDs any) *MockStore_WorkflowMemoryPeaks_Call {
+	return &MockStore_WorkflowMemoryPeaks_Call{Call: _e.mock.On("WorkflowMemoryPeaks", pipelineIDs)}
+}
+
+func (_c *MockStore_WorkflowMemoryPeaks_Call) Run(run func(pipelineIDs []int64)) *MockStore_WorkflowMemoryPeaks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []int64
+		if args[0] != nil {
+			arg0 = args[0].([]int64)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_WorkflowMemoryPeaks_Call) Return(workflowMemoryPeaks []*model.WorkflowMemoryPeak, err error) *MockStore_WorkflowMemoryPeaks_Call {
+	_c.Call.Return(workflowMemoryPeaks, err)
+	return _c
+}
+
+func (_c *MockStore_WorkflowMemoryPeaks_Call) RunAndReturn(run func(pipelineIDs []int64) ([]*model.WorkflowMemoryPeak, error)) *MockStore_WorkflowMemoryPeaks_Call {
 	_c.Call.Return(run)
 	return _c
 }

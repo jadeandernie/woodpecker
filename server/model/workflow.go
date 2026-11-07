@@ -32,6 +32,12 @@ type Workflow struct {
 	AxisID     int               `json:"-"                    xorm:"axis_id"`
 	Children   []*Step           `json:"children,omitempty"   xorm:"-"`
 
+	// Group and Subgroup sort the workflow by its name and the repo's workflow
+	// group rules, e.g. "deploy" and "knowledge" for
+	// deploy-service-knowledge-store-rpc. They are derived, not stored.
+	Group    string `json:"group,omitempty"    xorm:"-"`
+	Subgroup string `json:"subgroup,omitempty" xorm:"-"`
+
 	// ConcurrencyGroup is the concurrency group without a limit the workflow
 	// is in, or empty if it is in none. Of the workflows of a repository's
 	// pipelines in such a group, those of one pipeline run at a time, and a
