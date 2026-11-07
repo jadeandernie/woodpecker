@@ -1,0 +1,67 @@
+# Builds this fork's server and agent images for linux/amd64 and pushes them to the NAS registry.
+#
+# It lives outside .woodpecker/ so upstream's own workflows never run for the fork: set the repository's
+# config path in Woodpecker to `.woodpecker-fork/`.
+#
+# No Docker daemon or BuildKit is needed. The steps build the web UI and the two binaries, then `crane append`
+# lays each binary over the matching upstream release image, which keeps upstream's user, entrypoint,
+# certificates and time zones.
+#
+# Tags pushed for every build:
+#   192.168.1.155:15000/jade/woodpecker-server:v3.20.1-fork-<sha8>
+#   192.168.1.155:15000/jade/woodpecker-agent:v3.20.1-fork-<sha8>
+# and the moving tag `v3.20-fork` on both.
+
+when:
+  - event: push
+    branch: v3.20-fork
+  - event: manual
+
+labels:
+  cognitiveos.runner: flossy-apps
+
+variables:
+  - &golang_image 'docker.io/golang:1.27'
+  - &node_image 'docker.io/node:26-alpine'
+
+steps:
+  web:
+    image: *node_image
+    directory: web/
+    commands:
+      - npx get-pnpm
+      - export PNPM_HOME='/root/.local/share/pnpm'
+      - export PATH="$${PNPM_HOME}/bin:$${PATH}"
+      - pnpm install --frozen-lockfile
+      - pnpm build
+
+  binaries:
+    image: *golang_image
+    depends_on: [web]
+    commands:
+      - SHORT=$(printf %.8s "$${CI_COMMIT_SHA}")
+      - LDFLAGS="-s -w -extldflags -static -X go.woodpecker-ci.org/woodpecker/v3/version.Version=3.20.1-fork+$${SHORT}"
+      - CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags grpcnotrace -ldflags "$${LDFLAGS}" -o dist/server/bin/woodpecker-server ./cmd/server
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags grpcnotrace -ldflags "$${LDFLAGS}" -o dist/agent/bin/woodpecker-agent ./cmd/agent
+      - ls -l dist/server/bin dist/agent/bin
+
+  images:
+    image: *golang_image
+    depends_on: [binaries]
+    environment:
+      BASE_TAG: v3.20.1
+      REGISTRY: 192.168.1.155:15000
+    commands:
+      - go install github.com/google/go-containerregistry/cmd/crane@v0.20.3
+      - TAG="$${BASE_TAG}-fork-$(printf %.8s "$${CI_COMMIT_SHA}")"
+      - |
+        for c in server agent; do
+          tar --owner=0 --group=0 --numeric-owner -C dist/$c -cf woodpecker-$c.tar bin
+          crane --platform linux/amd64 append --insecure \
+            -b docker.io/woodpeckerci/woodpecker-$c:$${BASE_TAG} \
+            -f woodpecker-$c.tar \
+            -t $${REGISTRY}/jade/woodpecker-$c:$${TAG}
+          crane tag --insecure $${REGISTRY}/jade/woodpecker-$c:$${TAG} v3.20-fork
+          crane config --insecure $${REGISTRY}/jade/woodpecker-$c:$${TAG}
+          echo "pushed $${REGISTRY}/jade/woodpecker-$c:$${TAG}"
+        done
