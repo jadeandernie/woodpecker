@@ -499,13 +499,14 @@ func TestTeams(t *testing.T) {
 
 func TestFileAndDir(t *testing.T) {
 	g := newTestForge(t, map[string]http.HandlerFunc{
-		"/api/v1/repos/owner/repo/contents/.woodpecker": func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "abc", r.URL.Query().Get("ref"))
-			_, _ = w.Write([]byte(`[` +
-				`{"type":"file","path":".woodpecker/a.yaml"},` +
-				`{"type":"dir","path":".woodpecker/sub"},` +
-				`{"type":"file","path":".woodpecker/b.yaml"}]`))
+		// Dir lists the folder as a git tree named "<commit>:<folder>"
+		"/api/v1/repos/owner/repo/git/trees/abc:.woodpecker": func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"total_count":3,"tree":[` +
+				`{"type":"blob","mode":"100644","path":"a.yaml"},` +
+				`{"type":"tree","mode":"040000","path":"sub"},` +
+				`{"type":"blob","mode":"100644","path":"b.yaml"}]}`))
 		},
+		"/api/v1/repos/owner/repo/git/trees/": respond(http.StatusNotFound, `{"message":"not found"}`),
 		"/api/v1/repos/owner/repo/contents/": respond(http.StatusNotFound, `{"message":"not found"}`),
 		"/api/v1/repos/owner/repo/raw/": func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "abc", r.URL.Query().Get("ref"))
