@@ -138,3 +138,95 @@ func TestQueuePipelineOrgAgentsOnly(t *testing.T) {
 		})
 	}
 }
+
+func TestTakeOverQueuePlace(t *testing.T) {
+	tests := []struct {
+		name            string
+		superseded      []*model.Pipeline
+		queued          []*model.Task
+		wantCreated     int64
+		wantInPlaceOf   int64
+		wantOwnPosition bool
+	}{
+		{
+			name:            "supersedes none",
+			wantOwnPosition: true,
+		},
+		{
+			name: "takes the place of the oldest superseded pipeline",
+			superseded: []*model.Pipeline{
+				{ID: 7, Created: 900},
+				{ID: 4, Created: 500},
+				{ID: 6, Created: 800},
+			},
+			wantCreated:   500,
+			wantInPlaceOf: 4,
+		},
+		{
+			name: "same creation time goes by pipeline ID",
+			superseded: []*model.Pipeline{
+				{ID: 5, Created: 500},
+				{ID: 4, Created: 500},
+			},
+			wantCreated:   500,
+			wantInPlaceOf: 4,
+		},
+		{
+			name:            "never takes a later place",
+			superseded:      []*model.Pipeline{{ID: 9, Created: 1100}},
+			wantOwnPosition: true,
+		},
+		{
+			name:       "takes over the place a superseded pipeline holds in the queue",
+			superseded: []*model.Pipeline{{ID: 7, Created: 900}, {ID: 6, Created: 800}},
+			queued: []*model.Task{
+				{ID: "70", PipelineID: 7, Created: 600},
+				{ID: "71", PipelineID: 7, Created: 300, QueuedInPlaceOf: 2},
+				{ID: "60", PipelineID: 6, Created: 800},
+			},
+			wantCreated:   300,
+			wantInPlaceOf: 2,
+		},
+		{
+			name:       "ignores queued tasks of other pipelines",
+			superseded: []*model.Pipeline{{ID: 7, Created: 900}},
+			queued: []*model.Task{
+				{ID: "50", PipelineID: 5, Created: 100},
+				{ID: "80", PipelineID: 8, Created: 200, QueuedInPlaceOf: 1},
+			},
+			wantCreated:   900,
+			wantInPlaceOf: 7,
+		},
+		{
+			name: "ignores pipelines without a creation time",
+			superseded: []*model.Pipeline{
+				{ID: 3},
+				{ID: 6, Created: 800},
+			},
+			wantCreated:   800,
+			wantInPlaceOf: 6,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tasks := []*model.Task{
+				{ID: "1", PipelineID: 10, Created: 1000},
+				{ID: "2", PipelineID: 10, Created: 1000},
+			}
+
+			takeOverQueuePlace(tasks, tc.superseded, tc.queued)
+
+			for _, task := range tasks {
+				assert.Equal(t, int64(10), task.PipelineID, "the task stays in its own pipeline")
+				if tc.wantOwnPosition {
+					assert.Equal(t, int64(1000), task.Created)
+					assert.Zero(t, task.QueuedInPlaceOf)
+				} else {
+					assert.Equal(t, tc.wantCreated, task.Created)
+					assert.Equal(t, tc.wantInPlaceOf, task.QueuedInPlaceOf)
+				}
+			}
+		})
+	}
+}

@@ -15,6 +15,7 @@
 package pipeline
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -90,4 +91,72 @@ func getTaskDependencies(dependsOn []string, items []*builder.Item) (taskIDs []s
 		}
 	}
 	return taskIDs
+}
+
+// takeOverQueuePlace queues the tasks of a pipeline in the place of the oldest
+// pipeline it supersedes, so squashing pending pipelines does not move their
+// changes to the back of the queue. The place a superseded pipeline has is the
+// one its queued tasks hold, which is earlier than its own if it squashed
+// pipelines itself, or else its creation time and ID, the order the queue keeps
+// pipelines in. Pipelines without a creation time and no queued tasks are
+// skipped, and a place behind the tasks' own is never taken. The pipeline
+// itself keeps its creation time.
+func takeOverQueuePlace(tasks []*model.Task, superseded []*model.Pipeline, queued []*model.Task) {
+	isSuperseded := make(map[int64]bool, len(superseded))
+	for _, previous := range superseded {
+		isSuperseded[previous.ID] = true
+	}
+	held := make(map[int64]queuePlace, len(superseded))
+	for _, task := range queued {
+		if !isSuperseded[task.PipelineID] {
+			continue
+		}
+		if place, ok := held[task.PipelineID]; !ok || placeOf(task).before(place) {
+			held[task.PipelineID] = placeOf(task)
+		}
+	}
+
+	var oldest queuePlace
+	found := false
+	for _, previous := range superseded {
+		place, ok := held[previous.ID]
+		if !ok {
+			if previous.Created == 0 {
+				continue
+			}
+			place = queuePlace{created: previous.Created, pipelineID: previous.ID}
+		}
+		if !found || place.before(oldest) {
+			oldest, found = place, true
+		}
+	}
+	if !found {
+		return
+	}
+
+	for _, task := range tasks {
+		if oldest.before(placeOf(task)) {
+			task.Created = oldest.created
+			task.QueuedInPlaceOf = oldest.pipelineID
+		}
+	}
+}
+
+// queuePlace is a place in the queue, which orders tasks by creation time and
+// then by the ID of the pipeline whose place they have.
+type queuePlace struct {
+	created    int64
+	pipelineID int64
+}
+
+func (p queuePlace) before(other queuePlace) bool {
+	return cmp.Or(cmp.Compare(p.created, other.created), cmp.Compare(p.pipelineID, other.pipelineID)) < 0
+}
+
+// placeOf returns the place in the queue the task has.
+func placeOf(task *model.Task) queuePlace {
+	if task.QueuedInPlaceOf != 0 {
+		return queuePlace{created: task.Created, pipelineID: task.QueuedInPlaceOf}
+	}
+	return queuePlace{created: task.Created, pipelineID: task.PipelineID}
 }

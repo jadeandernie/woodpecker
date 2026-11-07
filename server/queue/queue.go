@@ -104,7 +104,9 @@ func (t *InfoT) String() string {
 // Queue defines a task queue for scheduling tasks among
 // a pool of workers.
 type Queue interface {
-	// PushAtOnce pushes multiple tasks to the tail of this queue.
+	// PushAtOnce pushes multiple tasks to the tail of this queue, except a task
+	// queued in place of an earlier pipeline (see model.Task.QueuedInPlaceOf),
+	// which goes to that pipeline's place.
 	PushAtOnce(c context.Context, tasks []*model.Task) error
 
 	// Poll retrieves and removes a task head of this queue. The filter is

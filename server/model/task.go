@@ -40,9 +40,14 @@ type Task struct {
 	// ConcurrencyGroup identifies tasks that are limited against each other.
 	// It is empty when no concurrency limit applies.
 	ConcurrencyGroup string `json:"concurrency_group" xorm:"'concurrency_group'"`
-	// Created is the unix timestamp the task's pipeline was created at. It
-	// defines the queue ordering across pipelines.
+	// Created is the unix timestamp the task is ordered by in the queue. It is
+	// the creation time of the task's pipeline, or of the pipeline named by
+	// QueuedInPlaceOf if the task took over that pipeline's place.
 	Created int64 `json:"created" xorm:"NOT NULL DEFAULT 0 'created'"`
+	// QueuedInPlaceOf is the ID of an earlier pipeline whose place in the queue
+	// the task took over, or 0 if it is queued in the place of its own pipeline.
+	// A pipeline squashing previous pipelines takes the place of the oldest one.
+	QueuedInPlaceOf int64 `json:"queued_in_place_of,omitempty" xorm:"NOT NULL DEFAULT 0 'queued_in_place_of'"`
 } //	@name	Task
 
 // TableName return database table name for xorm.

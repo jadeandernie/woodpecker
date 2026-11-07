@@ -15,14 +15,17 @@
 package pipeline
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"go.woodpecker-ci.org/woodpecker/v3/pipeline/frontend/builder"
 	"go.woodpecker-ci.org/woodpecker/v3/server"
 	forge_mocks "go.woodpecker-ci.org/woodpecker/v3/server/forge/mocks"
 	"go.woodpecker-ci.org/woodpecker/v3/server/model"
+	"go.woodpecker-ci.org/woodpecker/v3/server/queue"
 	scheduler_mocks "go.woodpecker-ci.org/woodpecker/v3/server/scheduler/mocks"
 	store_mocks "go.woodpecker-ci.org/woodpecker/v3/server/store/mocks"
 )
@@ -189,6 +192,7 @@ func TestStartSquash(t *testing.T) {
 
 	t.Run("cancels superseded pipelines after queuing", func(t *testing.T) {
 		s := store_mocks.NewMockStore(t)
+		s.EXPECT().OrgGet(int64(1)).Return(&model.Org{ID: 1}, nil).Maybe()
 		s.EXPECT().GetPipeline(int64(2)).Return(&model.Pipeline{ID: 2, Number: 2, Status: model.StatusPending}, nil).Once()
 		s.EXPECT().WorkflowGetTree(mock.Anything).Return(nil, nil).Twice()
 		s.EXPECT().UpdatePipeline(mock.MatchedBy(func(p *model.Pipeline) bool {
@@ -196,6 +200,7 @@ func TestStartSquash(t *testing.T) {
 		})).Return(nil).Once()
 
 		scheduler := scheduler_mocks.NewMockScheduler(t)
+		scheduler.EXPECT().Info(mock.Anything).Return(queue.InfoT{}).Once()
 		queued := scheduler.EXPECT().StartPipeline(mock.Anything, repo, pipeline, mock.Anything).Return(nil).Once()
 		scheduler.EXPECT().CancelWorkflows(mock.Anything, mock.Anything).Return(nil).Once().NotBefore(queued)
 		scheduler.EXPECT().PublishPipelineEvent(mock.Anything, repo, mock.Anything).Return(nil).Once()
@@ -210,8 +215,10 @@ func TestStartSquash(t *testing.T) {
 
 	t.Run("cancels nothing if queuing fails", func(t *testing.T) {
 		s := store_mocks.NewMockStore(t)
+		s.EXPECT().OrgGet(int64(1)).Return(&model.Org{ID: 1}, nil).Maybe()
 
 		scheduler := scheduler_mocks.NewMockScheduler(t)
+		scheduler.EXPECT().Info(mock.Anything).Return(queue.InfoT{}).Once()
 		scheduler.EXPECT().StartPipeline(mock.Anything, repo, pipeline, mock.Anything).Return(assert.AnError).Once()
 
 		previous := server.Config.Services.Scheduler
@@ -220,5 +227,101 @@ func TestStartSquash(t *testing.T) {
 
 		_, err := start(t.Context(), forge_mocks.NewMockForge(t), s, pipeline, user, repo, nil, []*model.Pipeline{superseded})
 		assert.ErrorIs(t, err, assert.AnError)
+	})
+
+	items := []*builder.Item{
+		{Workflow: &builder.Workflow{ID: 1, Name: "build"}},
+		{Workflow: &builder.Workflow{ID: 2, Name: "deploy"}},
+	}
+	// queuedTasks captures the tasks start queues for the pipeline. The queue
+	// holds inQueue; nil means start must not look at it.
+	queuedTasks := func(t *testing.T, pipeline *model.Pipeline, inQueue *queue.InfoT) *[]*model.Task {
+		t.Helper()
+		var queued []*model.Task
+		scheduler := scheduler_mocks.NewMockScheduler(t)
+		if inQueue != nil {
+			scheduler.EXPECT().Info(mock.Anything).Return(*inQueue).Once()
+		}
+		scheduler.EXPECT().StartPipeline(mock.Anything, repo, pipeline, mock.Anything).
+			Run(func(_ context.Context, _ *model.Repo, _ *model.Pipeline, tasks []*model.Task) { queued = tasks }).
+			Return(nil).Once()
+
+		previous := server.Config.Services.Scheduler
+		server.Config.Services.Scheduler = scheduler
+		t.Cleanup(func() { server.Config.Services.Scheduler = previous })
+		return &queued
+	}
+
+	t.Run("queues in the place of the oldest superseded pipeline", func(t *testing.T) {
+		squashing := &model.Pipeline{ID: 10, Number: 10, Event: model.EventPush, Branch: "main", Created: 400}
+		oldest := &model.Pipeline{ID: 2, Number: 2, Event: model.EventPush, Branch: "main", Status: model.StatusPending, Created: 200}
+		newer := &model.Pipeline{ID: 3, Number: 3, Event: model.EventPush, Branch: "main", Status: model.StatusBlocked, Created: 300}
+
+		// both started in the meantime, so neither is canceled
+		s := store_mocks.NewMockStore(t)
+		s.EXPECT().OrgGet(int64(1)).Return(&model.Org{ID: 1}, nil).Maybe()
+		s.EXPECT().GetPipeline(int64(3)).Return(&model.Pipeline{ID: 3, Number: 3, Status: model.StatusRunning}, nil).Once()
+		s.EXPECT().GetPipeline(int64(2)).Return(&model.Pipeline{ID: 2, Number: 2, Status: model.StatusRunning}, nil).Once()
+		queued := queuedTasks(t, squashing, &queue.InfoT{})
+
+		_, err := start(t.Context(), forge_mocks.NewMockForge(t), s, squashing, user, repo, items, []*model.Pipeline{newer, oldest})
+		assert.NoError(t, err)
+
+		if assert.Len(t, *queued, 2) {
+			for _, task := range *queued {
+				assert.Equal(t, int64(10), task.PipelineID)
+				assert.Equal(t, int64(200), task.Created, "task %s must be ordered like the oldest superseded pipeline", task.Name)
+				assert.Equal(t, int64(2), task.QueuedInPlaceOf, "task %s must take the place of the oldest superseded pipeline", task.Name)
+			}
+		}
+		assert.Equal(t, int64(400), squashing.Created, "the pipeline keeps its own creation time")
+	})
+
+	t.Run("takes over the place a superseded pipeline holds in the queue", func(t *testing.T) {
+		// 3 squashed 1 and holds its place, then 10 squashes 3
+		squashing := &model.Pipeline{ID: 10, Number: 10, Event: model.EventPush, Branch: "main", Created: 400}
+		previous := &model.Pipeline{ID: 3, Number: 3, Event: model.EventPush, Branch: "main", Status: model.StatusPending, Created: 300}
+
+		s := store_mocks.NewMockStore(t)
+		s.EXPECT().OrgGet(int64(1)).Return(&model.Org{ID: 1}, nil).Maybe()
+		s.EXPECT().GetPipeline(int64(3)).Return(&model.Pipeline{ID: 3, Number: 3, Status: model.StatusRunning}, nil).Once()
+		queued := queuedTasks(t, squashing, &queue.InfoT{
+			Pending: []*model.Task{
+				{ID: "40", PipelineID: 4, Created: 50},
+				{ID: "30", PipelineID: 3, Created: 100, QueuedInPlaceOf: 1},
+				{ID: "50", PipelineID: 5, Created: 150},
+			},
+			WaitingOnDeps: []*model.Task{
+				{ID: "31", PipelineID: 3, Created: 100, QueuedInPlaceOf: 1},
+			},
+		})
+
+		_, err := start(t.Context(), forge_mocks.NewMockForge(t), s, squashing, user, repo, items, []*model.Pipeline{previous})
+		assert.NoError(t, err)
+
+		if assert.Len(t, *queued, 2) {
+			for _, task := range *queued {
+				assert.Equal(t, int64(100), task.Created, "task %s must be ordered like the place pipeline 3 holds", task.Name)
+				assert.Equal(t, int64(1), task.QueuedInPlaceOf, "task %s must take the place pipeline 3 holds", task.Name)
+			}
+		}
+		assert.Equal(t, int64(400), squashing.Created, "the pipeline keeps its own creation time")
+	})
+
+	t.Run("pipeline that supersedes none keeps its own place", func(t *testing.T) {
+		own := &model.Pipeline{ID: 10, Number: 10, Event: model.EventPush, Branch: "main", Created: 400}
+		queued := queuedTasks(t, own, nil)
+
+		s := store_mocks.NewMockStore(t)
+		s.EXPECT().OrgGet(int64(1)).Return(&model.Org{ID: 1}, nil).Maybe()
+		_, err := start(t.Context(), forge_mocks.NewMockForge(t), s, own, user, repo, items, nil)
+		assert.NoError(t, err)
+
+		if assert.Len(t, *queued, 2) {
+			for _, task := range *queued {
+				assert.Equal(t, int64(400), task.Created)
+				assert.Zero(t, task.QueuedInPlaceOf)
+			}
+		}
 	})
 }

@@ -89,6 +89,7 @@ With **Squash pending pipelines** enabled, a new pipeline only cancels previous 
 
 - Previous pipelines are only squashed into a newer one, never into a pipeline of an older commit, and a restarted pipeline squashes none.
 - A pipeline waiting for approval squashes the previous pipelines when it is approved, and a previous pipeline waiting for approval is squashed like a pending one.
+- The new pipeline takes the place in the queue of the oldest pipeline it squashes, or the earlier place that pipeline took over itself, so it does not wait behind pipelines created since. Its own creation time is unchanged.
 - Only the changed files are carried over. Conditions on the commit message, author or other pipeline metadata are evaluated for the newest commit.
 - Pipelines with unknown changes (no changed files, e.g. cron or manual pipelines and pushes where the forge reported no files) are only squashed with each other, as the `on_empty` setting of a path filter decides for them.
 - If the new pipeline fails to start (e.g. its configuration cannot be loaded, or all its workflows are filtered out), the previous pipelines are not canceled.

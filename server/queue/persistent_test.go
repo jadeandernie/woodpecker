@@ -15,6 +15,9 @@
 package queue
 
 import (
+	"context"
+	"github.com/stretchr/testify/mock"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -256,4 +259,71 @@ func TestWithTaskStoreRestoresPausedStateAfterRestart(t *testing.T) {
 
 	restored := WithTaskStore(ctx2, q2, store)
 	assert.True(t, restored.Info(ctx2).Paused)
+}
+
+func TestPersistentQueueRestoreKeepsQueuedInPlaceOf(t *testing.T) {
+	var saved []*model.Task
+	reversed := false
+
+	store := store_mocks.NewMockStore(t)
+	store.EXPECT().TaskInsert(mock.Anything).RunAndReturn(func(task *model.Task) error {
+		saved = append(saved, task)
+		return nil
+	})
+	store.EXPECT().ServerConfigGet(serverConfigQueuePaused).Return("", types.ErrRecordNotExist).Maybe()
+	store.EXPECT().TaskList().RunAndReturn(func() ([]*model.Task, error) {
+		// read back copies, as a database would
+		tasks := make([]*model.Task, 0, len(saved))
+		for _, task := range saved {
+			stored := *task
+			tasks = append(tasks, &stored)
+		}
+		if reversed {
+			slices.Reverse(tasks)
+		}
+		return tasks, nil
+	})
+
+	restart := func(t *testing.T) (context.Context, Queue) {
+		t.Helper()
+		ctx, cancel := context.WithCancelCause(t.Context())
+		t.Cleanup(func() { cancel(nil) })
+		return ctx, WithTaskStore(ctx, NewMemoryQueue(ctx), store)
+	}
+
+	ctx, q := restart(t)
+	// main pushes 1 and 3 wait, a pull request (2) was created in between
+	for _, task := range []*model.Task{
+		{ID: "1-build", PipelineID: 1, Created: 100},
+		{ID: "2-build", PipelineID: 2, Created: 150},
+		{ID: "3-build", PipelineID: 3, Created: 180},
+	} {
+		assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{task}))
+	}
+	// main push 5 squashes them and takes the place of 1
+	assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{
+		{ID: "5-build", PipelineID: 5, Created: 100, QueuedInPlaceOf: 1},
+		{ID: "5-test", PipelineID: 5, Created: 100, QueuedInPlaceOf: 1},
+	}))
+	// and a pull request comes in after it
+	assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{{ID: "6-build", PipelineID: 6, Created: 300}}))
+
+	want := []string{"1-build", "5-build", "5-test", "2-build", "3-build", "6-build"}
+	assert.Equal(t, want, pendingIDs(q.Info(ctx)))
+
+	t.Run("store lists tasks in the order they were stored", func(t *testing.T) {
+		reversed = false
+		ctx, q := restart(t)
+		assert.Equal(t, want, pendingIDs(q.Info(ctx)))
+	})
+
+	t.Run("store lists tasks in another order", func(t *testing.T) {
+		reversed = true
+		ctx, q := restart(t)
+		got := pendingIDs(q.Info(ctx))
+		assert.ElementsMatch(t, want, got)
+		if assert.Len(t, got, len(want)) {
+			assert.ElementsMatch(t, []string{"5-build", "5-test"}, got[:2], "pipeline 5 must stay ahead of pipelines created after the one it took the place of: %v", got)
+		}
+	})
 }

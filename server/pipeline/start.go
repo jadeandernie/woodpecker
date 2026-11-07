@@ -17,6 +17,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/rs/zerolog/log"
 
@@ -29,8 +30,9 @@ import (
 
 // start a pipeline, make sure it was stored persistent in the store before.
 // If the repo squashes pending pipelines, superseded are the previous pipelines
-// squashed into this one (see squashPreviousPipelines); they are canceled once
-// this pipeline is queued, and no other previous pipeline is canceled.
+// squashed into this one (see squashPreviousPipelines); this pipeline is queued
+// in the place of the oldest of them, and they are canceled once it is queued.
+// No other previous pipeline is canceled.
 func start(ctx context.Context, forge forge.Forge, store store.Store, activePipeline *model.Pipeline, user *model.User, repo *model.Repo, pipelineItems []*builder.Item, superseded []*model.Pipeline) (*model.Pipeline, error) {
 	// call to cancel previous pipelines if needed
 	if !repo.CancelPreviousPipelineSquash {
@@ -48,6 +50,11 @@ func start(ctx context.Context, forge forge.Forge, store store.Store, activePipe
 	tasks, err := pipelineTasks(repo, org, activePipeline, pipelineItems)
 	if err != nil {
 		return nil, err
+	}
+	// the squashed changes keep the place they had in the queue
+	if len(superseded) > 0 {
+		info := server.Config.Services.Scheduler.Info(ctx)
+		takeOverQueuePlace(tasks, superseded, slices.Concat(info.Pending, info.WaitingOnDeps, info.Running))
 	}
 
 	// announce the new pipeline to UI subscribers and enqueue its tasks in one go
