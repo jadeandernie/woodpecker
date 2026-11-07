@@ -48,6 +48,12 @@ const routes: RouteRecordRaw[] = [
             meta: { repoHeader: true },
           },
           {
+            path: 'insights',
+            name: 'repo-insights',
+            component: (): Component => import('~/views/repo/RepoInsights.vue'),
+            meta: { repoHeader: true },
+          },
+          {
             path: 'branches',
             meta: { repoHeader: true },
             children: [
@@ -91,6 +97,12 @@ const routes: RouteRecordRaw[] = [
                 path: ':stepId?',
                 name: 'repo-pipeline',
                 component: (): Component => import('~/views/repo/pipeline/Pipeline.vue'),
+                props: true,
+              },
+              {
+                path: 'graph',
+                name: 'repo-pipeline-graph',
+                component: (): Component => import('~/views/repo/pipeline/PipelineGraph.vue'),
                 props: true,
               },
               {

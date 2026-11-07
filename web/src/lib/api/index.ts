@@ -16,6 +16,7 @@ import type {
   Repo,
   RepoPermissions,
   RepoSettings,
+  RepoStats,
   Secret,
   User,
   WorkflowInfo,
@@ -124,6 +125,15 @@ export default class WoodpeckerClient extends ApiClient {
   ): Promise<Pipeline[]> {
     const query = encodeQueryString(opts);
     return this._get(`/api/repos/${repoId}/pipelines?${query}`) as Promise<Pipeline[]>;
+  }
+
+  // the pipeline history of a repo with each workflow's group, timing and memory, for the insights views
+  async getRepoStats(
+    repoId: number,
+    opts?: { branch?: string; event?: string; limit?: number },
+  ): Promise<RepoStats> {
+    const query = encodeQueryString(opts);
+    return this._get(`/api/repos/${repoId}/stats?${query}`) as Promise<RepoStats>;
   }
 
   async getPipeline(repoId: number, pipelineNumber: number | 'latest'): Promise<Pipeline> {

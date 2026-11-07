@@ -1,4 +1,5 @@
 import type { Pipeline } from './pipeline';
+import type { WorkflowGroupRule } from './stats';
 
 // A version control repository.
 export interface Repo {
@@ -81,6 +82,9 @@ export interface Repo {
   // Only cancel previous pipelines that have not started yet, let a running one finish
   cancel_previous_pipeline_keep_running: boolean;
 
+  // rules that sort workflows into groups (build, test, deploy) and subgroups by name; empty uses the built-in rules
+  workflow_groups?: WorkflowGroupRule[];
+
   // Only cancel previous pipelines that have not started yet and run their changed files in the new one
   cancel_previous_pipeline_squash: boolean;
 
@@ -140,6 +144,7 @@ export type RepoSettings = Pick<
   | 'allow_deploy'
   | 'cancel_previous_pipeline_events'
   | 'cancel_previous_pipeline_keep_running'
+  | 'workflow_groups'
   | 'cancel_previous_pipeline_squash'
   | 'netrc_trusted'
 >;

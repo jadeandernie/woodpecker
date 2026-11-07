@@ -127,6 +127,12 @@ export interface PipelineWorkflow {
   agent_id?: number;
   error?: string;
   children?: PipelineStep[];
+  // workflows this one waits for (its depends_on)
+  depends_on?: string[];
+  // the stage (build, test, deploy, other) and the subject (knowledge, tensor, ...) of the workflow, derived on the
+  // server from its name and the repo's workflow group rules
+  group?: string;
+  subgroup?: string;
 }
 
 // WorkflowInfo is a workflow a repo config would run, as listed for a manual pipeline
@@ -148,6 +154,9 @@ export interface PipelineStep {
   finished?: number;
   error?: string;
   type?: StepType;
+  depends_on?: string[];
+  // highest memory use of the step's container in bytes; 0 or missing when the agent did not measure it
+  memory_peak?: number;
 }
 
 export interface PipelineLog {
