@@ -287,6 +287,64 @@ func (_c *MockScheduler_Extend_Call) RunAndReturn(run func(c context.Context, ag
 	return _c
 }
 
+// HoldGroup provides a mock function for the type MockScheduler
+func (_mock *MockScheduler) HoldGroup(c context.Context, group string, pipelineID int64, workflowIDs []string) {
+	_mock.Called(c, group, pipelineID, workflowIDs)
+	return
+}
+
+// MockScheduler_HoldGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HoldGroup'
+type MockScheduler_HoldGroup_Call struct {
+	*mock.Call
+}
+
+// HoldGroup is a helper method to define mock.On call
+//   - c context.Context
+//   - group string
+//   - pipelineID int64
+//   - workflowIDs []string
+func (_e *MockScheduler_Expecter) HoldGroup(c interface{}, group interface{}, pipelineID interface{}, workflowIDs interface{}) *MockScheduler_HoldGroup_Call {
+	return &MockScheduler_HoldGroup_Call{Call: _e.mock.On("HoldGroup", c, group, pipelineID, workflowIDs)}
+}
+
+func (_c *MockScheduler_HoldGroup_Call) Run(run func(c context.Context, group string, pipelineID int64, workflowIDs []string)) *MockScheduler_HoldGroup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockScheduler_HoldGroup_Call) Return() *MockScheduler_HoldGroup_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockScheduler_HoldGroup_Call) RunAndReturn(run func(c context.Context, group string, pipelineID int64, workflowIDs []string)) *MockScheduler_HoldGroup_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Info provides a mock function for the type MockScheduler
 func (_mock *MockScheduler) Info(c context.Context) queue.InfoT {
 	ret := _mock.Called(c)
@@ -715,6 +773,72 @@ func (_c *MockScheduler_Subscribe_Call) Return(err error) *MockScheduler_Subscri
 }
 
 func (_c *MockScheduler_Subscribe_Call) RunAndReturn(run func(c context.Context, t pubsub.Topics, r pubsub.Receiver) error) *MockScheduler_Subscribe_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SupersedeWorkflows provides a mock function for the type MockScheduler
+func (_mock *MockScheduler) SupersedeWorkflows(c context.Context, workflowIDs []string) (bool, error) {
+	ret := _mock.Called(c, workflowIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SupersedeWorkflows")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) (bool, error)); ok {
+		return returnFunc(c, workflowIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) bool); ok {
+		r0 = returnFunc(c, workflowIDs)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = returnFunc(c, workflowIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockScheduler_SupersedeWorkflows_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SupersedeWorkflows'
+type MockScheduler_SupersedeWorkflows_Call struct {
+	*mock.Call
+}
+
+// SupersedeWorkflows is a helper method to define mock.On call
+//   - c context.Context
+//   - workflowIDs []string
+func (_e *MockScheduler_Expecter) SupersedeWorkflows(c interface{}, workflowIDs interface{}) *MockScheduler_SupersedeWorkflows_Call {
+	return &MockScheduler_SupersedeWorkflows_Call{Call: _e.mock.On("SupersedeWorkflows", c, workflowIDs)}
+}
+
+func (_c *MockScheduler_SupersedeWorkflows_Call) Run(run func(c context.Context, workflowIDs []string)) *MockScheduler_SupersedeWorkflows_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockScheduler_SupersedeWorkflows_Call) Return(b bool, err error) *MockScheduler_SupersedeWorkflows_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockScheduler_SupersedeWorkflows_Call) RunAndReturn(run func(c context.Context, workflowIDs []string) (bool, error)) *MockScheduler_SupersedeWorkflows_Call {
 	_c.Call.Return(run)
 	return _c
 }

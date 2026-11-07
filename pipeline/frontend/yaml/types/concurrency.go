@@ -24,6 +24,9 @@ import (
 // time. It can be unmarshaled from:
 //   - an integer: `concurrency: 1` (limit only, default per-workflow group)
 //   - an object: `concurrency: {limit: 1, group: deploy}`
+//   - an object without a limit: `concurrency: {group: deploy}`, a group in
+//     which one pipeline's workflows run at a time and only the newest
+//     waiting pipeline's are kept
 type Concurrency struct {
 	// Limit is the maximum number of workflows sharing the same group that
 	// are allowed to run at the same time. A value <= 0 disables the limit.
@@ -32,6 +35,10 @@ type Concurrency struct {
 	// resolve to the same group within a repository are serialized according
 	// to the limit. When empty the limit applies per workflow, so different
 	// runs of the same workflow are limited against each other.
+	//
+	// Without a limit, the workflows of a pipeline in the group run while no
+	// other pipeline's do, and a newer pipeline's supersede those of older
+	// pipelines that have not started yet.
 	Group string `yaml:"group,omitempty"`
 }
 

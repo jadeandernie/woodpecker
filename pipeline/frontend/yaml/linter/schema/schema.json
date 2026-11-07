@@ -109,7 +109,7 @@
       ]
     },
     "concurrency": {
-      "description": "Limit how many instances of this workflow may run at the same time. Provide an integer for the limit, or an object to also set a custom group.",
+      "description": "Limit how many instances of this workflow may run at the same time. Provide an integer for the limit, an object to also set a custom group, or an object with only a group to run one pipeline's workflows in the group at a time and keep only the newest pipeline's waiting. Read more: https://woodpecker-ci.org/docs/usage/concurrency-groups",
       "oneOf": [
         {
           "type": "integer",
@@ -118,7 +118,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["limit"],
+          "minProperties": 1,
           "properties": {
             "limit": {
               "type": "integer",
@@ -127,7 +127,8 @@
             },
             "group": {
               "type": "string",
-              "description": "Identifier shared by workflows that are limited against each other. Defaults to the workflow name. Environment variables are substituted, e.g. `deploy-${CI_COMMIT_BRANCH}`."
+              "minLength": 1,
+              "description": "Identifier shared by workflows that are limited against each other. Defaults to the workflow name. Without a limit, the workflows of one pipeline in the group run at a time, and those of an older pipeline that have not started yet are superseded by a newer pipeline's. Environment variables are substituted, e.g. `deploy-${CI_COMMIT_BRANCH}`."
             }
           }
         }

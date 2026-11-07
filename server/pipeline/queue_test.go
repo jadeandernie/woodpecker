@@ -62,6 +62,15 @@ func TestQueuePipelineConcurrency(t *testing.T) {
 			expectedLimit: 1,
 			expectedGroup: "7/test/",
 		},
+		{
+			name: "group without a limit is scoped to the repo",
+			item: &builder.Item{
+				Workflow:         &builder.Workflow{ID: 4, Name: "deploy"},
+				ConcurrencyGroup: "deploy",
+			},
+			expectedLimit: 0,
+			expectedGroup: "7//deploy",
+		},
 	}
 
 	for _, tc := range tests {

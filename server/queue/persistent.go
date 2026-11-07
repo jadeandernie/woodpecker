@@ -123,3 +123,23 @@ func (q *persistentQueue) ErrorAtOnce(c context.Context, ids []string, err error
 	}
 	return nil
 }
+
+// Supersede removes the tasks from the queue and the store if none of them has
+// been handed out yet; see Queue.Supersede.
+func (q *persistentQueue) Supersede(c context.Context, ids []string) (bool, error) {
+	superseded, err := q.Queue.Supersede(c, ids)
+	if err != nil || !superseded {
+		return superseded, err
+	}
+
+	var errs []error
+	for _, id := range ids {
+		if deleteErr := q.store.TaskDelete(id); deleteErr != nil && !errors.Is(deleteErr, types.ErrRecordNotExist) {
+			errs = append(errs, fmt.Errorf("task id [%s]: %w", id, deleteErr))
+		}
+	}
+	if len(errs) != 0 {
+		return true, fmt.Errorf("failed to delete superseded tasks from persistent store: %w", errors.Join(errs...))
+	}
+	return true, nil
+}

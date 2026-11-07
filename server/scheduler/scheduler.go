@@ -63,6 +63,15 @@ type Scheduler interface {
 	// queue and signals the cancellation to any agents waiting on them. This is
 	// the entry point for the scheduler to later own the full cancel cleanup.
 	CancelWorkflows(c context.Context, workflowIDs []string) error
+
+	// HoldGroup makes the pipeline hold the queue's concurrency group without
+	// a limit until the given workflows are done; see queue.Queue.HoldGroup.
+	HoldGroup(c context.Context, group string, pipelineID int64, workflowIDs []string)
+
+	// SupersedeWorkflows removes the given workflows from the queue if none of
+	// them has been handed to an agent yet, and reports whether it did; see
+	// queue.Queue.Supersede.
+	SupersedeWorkflows(c context.Context, workflowIDs []string) (bool, error)
 }
 
 func NewScheduler(ctx context.Context, store store.Store, q queue.Queue, ps pubsub.PubSub) Scheduler {

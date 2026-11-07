@@ -267,6 +267,8 @@ func workflowsFromPipelineBuilder(pipeline *model.Pipeline, pipelineItems []*bui
 			State:      model.StatusPending,
 			Environ:    item.Workflow.Environ,
 			AxisID:     item.Workflow.AxisID,
+
+			ConcurrencyGroup: exclusiveGroup(item),
 		}
 
 		if pipeline.Status == model.StatusBlocked {

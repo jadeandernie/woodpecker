@@ -291,6 +291,64 @@ func (_c *MockQueue_Extend_Call) RunAndReturn(run func(c context.Context, agentI
 	return _c
 }
 
+// HoldGroup provides a mock function for the type MockQueue
+func (_mock *MockQueue) HoldGroup(c context.Context, group string, pipelineID int64, taskIDs []string) {
+	_mock.Called(c, group, pipelineID, taskIDs)
+	return
+}
+
+// MockQueue_HoldGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HoldGroup'
+type MockQueue_HoldGroup_Call struct {
+	*mock.Call
+}
+
+// HoldGroup is a helper method to define mock.On call
+//   - c context.Context
+//   - group string
+//   - pipelineID int64
+//   - taskIDs []string
+func (_e *MockQueue_Expecter) HoldGroup(c interface{}, group interface{}, pipelineID interface{}, taskIDs interface{}) *MockQueue_HoldGroup_Call {
+	return &MockQueue_HoldGroup_Call{Call: _e.mock.On("HoldGroup", c, group, pipelineID, taskIDs)}
+}
+
+func (_c *MockQueue_HoldGroup_Call) Run(run func(c context.Context, group string, pipelineID int64, taskIDs []string)) *MockQueue_HoldGroup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockQueue_HoldGroup_Call) Return() *MockQueue_HoldGroup_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockQueue_HoldGroup_Call) RunAndReturn(run func(c context.Context, group string, pipelineID int64, taskIDs []string)) *MockQueue_HoldGroup_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Info provides a mock function for the type MockQueue
 func (_mock *MockQueue) Info(c context.Context) queue.InfoT {
 	ret := _mock.Called(c)
@@ -576,6 +634,72 @@ func (_c *MockQueue_Resume_Call) Return() *MockQueue_Resume_Call {
 
 func (_c *MockQueue_Resume_Call) RunAndReturn(run func()) *MockQueue_Resume_Call {
 	_c.Run(run)
+	return _c
+}
+
+// Supersede provides a mock function for the type MockQueue
+func (_mock *MockQueue) Supersede(c context.Context, ids []string) (bool, error) {
+	ret := _mock.Called(c, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Supersede")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) (bool, error)); ok {
+		return returnFunc(c, ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) bool); ok {
+		r0 = returnFunc(c, ids)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = returnFunc(c, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockQueue_Supersede_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Supersede'
+type MockQueue_Supersede_Call struct {
+	*mock.Call
+}
+
+// Supersede is a helper method to define mock.On call
+//   - c context.Context
+//   - ids []string
+func (_e *MockQueue_Expecter) Supersede(c interface{}, ids interface{}) *MockQueue_Supersede_Call {
+	return &MockQueue_Supersede_Call{Call: _e.mock.On("Supersede", c, ids)}
+}
+
+func (_c *MockQueue_Supersede_Call) Run(run func(c context.Context, ids []string)) *MockQueue_Supersede_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockQueue_Supersede_Call) Return(b bool, err error) *MockQueue_Supersede_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockQueue_Supersede_Call) RunAndReturn(run func(c context.Context, ids []string) (bool, error)) *MockQueue_Supersede_Call {
+	_c.Call.Return(run)
 	return _c
 }
 

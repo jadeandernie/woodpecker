@@ -43,6 +43,13 @@ type worker struct {
 	stop    context.CancelCauseFunc
 }
 
+// groupHolds are the pipelines holding a concurrency group without a limit
+// (see model.Task.ExclusiveGroup): by pipeline ID, the tasks of the pipeline in
+// the group that are not done yet. A task the queue does not have, one running
+// on an agent since before a server restart, maps to the deadline by which its
+// agent has to extend it; the others map to the zero time.
+type groupHolds map[int64]map[string]time.Time
+
 type fifo struct {
 	sync.Mutex
 
@@ -53,6 +60,15 @@ type fifo struct {
 	waitingOnDeps *list.List
 	extension     time.Duration
 	paused        bool
+	// holds are the concurrency groups without a limit that are in progress,
+	// by group. Another pipeline's tasks in a group are not handed out while
+	// it is held.
+	holds map[string]groupHolds
+	// lost are the held tasks the queue does not have that were released as
+	// their agent did not extend them in time. They are not held again, so a
+	// workflow left running in the store by a lost agent does not hold up every
+	// new pipeline in its group.
+	lost map[string]struct{}
 }
 
 // processTimeInterval is the time till the queue rearranges things,
@@ -69,6 +85,8 @@ func NewMemoryQueue(ctx context.Context) Queue {
 		waitingOnDeps: list.New(),
 		extension:     constant.TaskTimeout,
 		paused:        false,
+		holds:         map[string]groupHolds{},
+		lost:          map[string]struct{}{},
 	}
 	go q.process()
 	return q
@@ -163,12 +181,16 @@ func (q *fifo) finished(ids []string, exitStatus model.StatusValue, err error) e
 	var errs []error
 	// we first process the tasks itself
 	for _, id := range ids {
+		// a task running on an agent since before a restart is not in the
+		// queue, but may hold its concurrency group
+		wasHeld := q.releaseHeld(id)
+		delete(q.lost, id)
 		if taskEntry, ok := q.running[id]; ok {
 			taskEntry.error = err
 			close(taskEntry.done)
 			delete(q.running, id)
-		} else {
-			errs = append(errs, q.removeFromPendingAndWaiting(id))
+		} else if removeErr := q.removeFromPendingAndWaiting(id); removeErr != nil && !wasHeld {
+			errs = append(errs, removeErr)
 		}
 	}
 
@@ -218,6 +240,15 @@ func (q *fifo) Extend(_ context.Context, agentID int64, taskID string) error {
 
 		state.deadline = time.Now().Add(q.extension)
 		return nil
+	}
+	// a task running on an agent since before a restart, holding its group
+	for _, holds := range q.holds {
+		for _, tasks := range holds {
+			if deadline, held := tasks[taskID]; held && !deadline.IsZero() {
+				tasks[taskID] = time.Now().Add(q.extension)
+				return nil
+			}
+		}
 	}
 	return ErrNotFound
 }
@@ -292,11 +323,13 @@ func (q *fifo) process() {
 		}
 
 		q.resubmitExpiredPipelines()
+		q.releaseExpiredHolds()
 		q.filterWaiting()
 		for pending, worker := q.assignToWorker(); pending != nil && worker != nil; pending, worker = q.assignToWorker() {
 			task, _ := pending.Value.(*model.Task)
 			task.AgentID = worker.agentID
 			delete(q.workers, worker)
+			q.holdGroup(task)
 			q.pending.Remove(pending)
 			q.running[task.ID] = &entry{
 				item:     task,
@@ -409,6 +442,13 @@ func (q *fifo) assignToWorker() (*list.Element, *worker) {
 			continue
 		}
 
+		// skip tasks in a concurrency group without a limit that another
+		// pipeline holds, they stay pending until it is done.
+		if !q.canRunInGroup(task) {
+			log.Debug().Msgf("queue: task %v deferred, another pipeline holds concurrency group %q", task.ID, task.ConcurrencyGroup)
+			continue
+		}
+
 		for worker := range q.workers {
 			matched, score := worker.filter(task)
 			if matched && score > bestScore {
@@ -488,6 +528,241 @@ func (q *fifo) canRunConcurrent(task *model.Task) bool {
 	}
 
 	return running+ahead < task.ConcurrencyLimit
+}
+
+// canRunInGroup reports whether the given task may be handed out without
+// running alongside another pipeline's tasks in its concurrency group without
+// a limit: a pipeline holds the group from when the first of its tasks in it is
+// handed out until all of them are done, and only its own tasks in the group
+// are handed out meanwhile. A pipeline never waits for itself, so its tasks in
+// the group run in the order of their dependencies. Tasks in no such group
+// always pass, and so do tasks that are only handed out to be marked skipped
+// as their dependencies preclude running.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) canRunInGroup(task *model.Task) bool {
+	group := task.ExclusiveGroup()
+	if group == "" || !task.ShouldRun() {
+		return true
+	}
+	for pipelineID := range q.holds[group] {
+		if pipelineID != task.PipelineID {
+			return false
+		}
+	}
+	return true
+}
+
+// holdGroup makes the pipeline of a task that is handed out hold the task's
+// concurrency group without a limit, with all its tasks in the group the queue
+// has, until they are done. A task handed out to be marked skipped does not
+// start the pipeline's unit in the group.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) holdGroup(task *model.Task) {
+	group := task.ExclusiveGroup()
+	if group == "" || !task.ShouldRun() {
+		return
+	}
+	tasks := q.heldTasks(group, task.PipelineID)
+	tasks[task.ID] = time.Time{}
+	q.eachTask(func(other *model.Task) {
+		if other.PipelineID == task.PipelineID && other.ExclusiveGroup() == group {
+			tasks[other.ID] = time.Time{}
+		}
+	})
+}
+
+// heldTasks returns the tasks by which the pipeline holds the group, adding
+// the hold if there is none.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) heldTasks(group string, pipelineID int64) map[string]time.Time {
+	holds, ok := q.holds[group]
+	if !ok {
+		holds = groupHolds{}
+		q.holds[group] = holds
+	}
+	tasks, ok := holds[pipelineID]
+	if !ok {
+		tasks = map[string]time.Time{}
+		holds[pipelineID] = tasks
+	}
+	return tasks
+}
+
+// HoldGroup makes the pipeline hold the concurrency group without a limit until
+// the given tasks of it are done; see Queue.HoldGroup.
+func (q *fifo) HoldGroup(_ context.Context, group string, pipelineID int64, taskIDs []string) {
+	if group == "" || len(taskIDs) == 0 {
+		return
+	}
+
+	q.Lock()
+	defer q.Unlock()
+
+	deadline := time.Now().Add(q.extension)
+	for _, id := range taskIDs {
+		if q.holdsTask(id) {
+			continue
+		}
+		if _, lost := q.lost[id]; lost {
+			continue
+		}
+		if q.has(id) {
+			q.heldTasks(group, pipelineID)[id] = time.Time{}
+		} else {
+			// running on an agent since before a restart: held while the agent
+			// extends it, like a running task
+			q.heldTasks(group, pipelineID)[id] = deadline
+		}
+	}
+}
+
+// holdsTask reports whether the task holds a concurrency group.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) holdsTask(taskID string) bool {
+	for _, holds := range q.holds {
+		for _, tasks := range holds {
+			if _, held := tasks[taskID]; held {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// releaseHeld removes the task from the group holds it is in, releasing the
+// groups whose pipeline has no tasks left in them. It reports whether the task
+// was held.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) releaseHeld(taskID string) bool {
+	held := false
+	for group, holds := range q.holds {
+		for pipelineID, tasks := range holds {
+			if _, ok := tasks[taskID]; !ok {
+				continue
+			}
+			held = true
+			delete(tasks, taskID)
+			if len(tasks) == 0 {
+				delete(holds, pipelineID)
+			}
+		}
+		if len(holds) == 0 {
+			delete(q.holds, group)
+		}
+	}
+	return held
+}
+
+// releaseExpiredHolds releases the held tasks the queue does not have whose
+// agent did not extend them in time, like resubmitExpiredPipelines does for
+// running tasks. Otherwise an agent lost during a server restart would hold the
+// group for good.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) releaseExpiredHolds() {
+	now := time.Now()
+	for group, holds := range q.holds {
+		for pipelineID, tasks := range holds {
+			for id, deadline := range tasks {
+				if !deadline.IsZero() && now.After(deadline) {
+					log.Info().Msgf("queue: releasing expired task %s from concurrency group %q", id, group)
+					delete(tasks, id)
+					q.lost[id] = struct{}{}
+				}
+			}
+			if len(tasks) == 0 {
+				delete(holds, pipelineID)
+			}
+		}
+		if len(holds) == 0 {
+			delete(q.holds, group)
+		}
+	}
+}
+
+// Supersede removes the given tasks from the queue if none of them was handed
+// out yet; see Queue.Supersede.
+func (q *fifo) Supersede(_ context.Context, ids []string) (bool, error) {
+	q.Lock()
+	defer q.Unlock()
+
+	type queued struct {
+		list    *list.List
+		element *list.Element
+	}
+	found := make([]queued, 0, len(ids))
+	for _, id := range ids {
+		if _, running := q.running[id]; running {
+			return false, nil
+		}
+		if q.holdsTask(id) {
+			return false, nil
+		}
+		element, from := q.findQueued(id)
+		if element == nil {
+			return false, nil
+		}
+		found = append(found, queued{list: from, element: element})
+	}
+
+	for _, task := range found {
+		task.list.Remove(task.element)
+	}
+	// their dependents in the queue see them skipped
+	for _, id := range ids {
+		q.updateDepStatusInQueue(id, model.StatusSkipped)
+	}
+	return true, nil
+}
+
+// findQueued returns the element of the task with the given ID in pending or
+// waiting on dependencies, and the list it is in, or nil if it is in neither.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) findQueued(taskID string) (*list.Element, *list.List) {
+	for _, tasks := range []*list.List{q.pending, q.waitingOnDeps} {
+		for element := tasks.Front(); element != nil; element = element.Next() {
+			if task, _ := element.Value.(*model.Task); task.ID == taskID {
+				return element, tasks
+			}
+		}
+	}
+	return nil, nil
+}
+
+// has reports whether the queue has the task with the given ID: pending,
+// waiting on dependencies or running.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) has(taskID string) bool {
+	if _, ok := q.running[taskID]; ok {
+		return true
+	}
+	element, _ := q.findQueued(taskID)
+	return element != nil
+}
+
+// eachTask calls f for every task the queue has: pending, waiting on
+// dependencies and running.
+//
+// Expects the queue to be locked by the caller.
+func (q *fifo) eachTask(f func(*model.Task)) {
+	for element := q.pending.Front(); element != nil; element = element.Next() {
+		task, _ := element.Value.(*model.Task)
+		f(task)
+	}
+	for element := q.waitingOnDeps.Front(); element != nil; element = element.Next() {
+		task, _ := element.Value.(*model.Task)
+		f(task)
+	}
+	for _, entry := range q.running {
+		f(entry.item)
+	}
 }
 
 // taskOrderLess reports whether task a was instantiated before task b. Ordering

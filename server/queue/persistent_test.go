@@ -138,3 +138,31 @@ func TestPersistentQueueRestoreKeepsQueuedInPlaceOf(t *testing.T) {
 		}
 	})
 }
+
+// Superseded tasks are removed from the backup store too, or they would come
+// back when the server restarts.
+func TestPersistentQueueSupersede(t *testing.T) {
+	ctx, cancel, q := setupTestQueue(t)
+	defer cancel(nil)
+
+	store := store_mocks.NewMockStore(t)
+	store.EXPECT().TaskDelete("11").Return(nil).Once()
+	store.EXPECT().TaskDelete("12").Return(types.ErrRecordNotExist).Once()
+
+	pq := &persistentQueue{Queue: q, store: store}
+	assert.NoError(t, q.PushAtOnce(ctx, []*model.Task{
+		groupTask("11", 1, 100, "1//deploy"),
+		groupTask("12", 1, 100, "1//deploy", "11"),
+		groupTask("21", 2, 200, "1//deploy"),
+	}))
+
+	ok, err := pq.Supersede(ctx, []string{"11", "12"})
+	assert.NoError(t, err)
+	assert.True(t, ok)
+	assert.Equal(t, []string{"21"}, pendingIDs(q.Info(ctx)))
+
+	// refused: nothing is deleted from the store (the mock fails on any call)
+	ok, err = pq.Supersede(ctx, []string{"21", "22"})
+	assert.NoError(t, err)
+	assert.False(t, ok)
+}

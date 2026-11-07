@@ -30,6 +30,12 @@ type Workflow struct {
 	Environ    map[string]string `json:"environ,omitempty"    xorm:"json 'environ'"`
 	AxisID     int               `json:"-"                    xorm:"axis_id"`
 	Children   []*Step           `json:"children,omitempty"   xorm:"-"`
+
+	// ConcurrencyGroup is the concurrency group without a limit the workflow
+	// is in, or empty if it is in none. Of the workflows of a repository's
+	// pipelines in such a group, those of one pipeline run at a time, and a
+	// pipeline's that have not started yet are superseded by a newer one's.
+	ConcurrencyGroup string `json:"concurrency_group,omitempty" xorm:"NOT NULL DEFAULT '' 'concurrency_group'"`
 }
 
 // TableName return database table name for xorm.

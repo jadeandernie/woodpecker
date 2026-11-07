@@ -143,6 +143,21 @@ type Queue interface {
 
 	// KickAgentWorkers kicks all workers for a given agent.
 	KickAgentWorkers(agentID int64)
+
+	// HoldGroup makes the pipeline hold the concurrency group without a limit
+	// (see model.Task.ExclusiveGroup) until the given tasks are done, as it
+	// does once it hands out a pipeline's first task in the group: no other
+	// pipeline's task in the group is handed out meanwhile. It is for a
+	// pipeline whose tasks in the group were handed out by an earlier queue,
+	// before a server restart. Of these, the ones the queue does not have are
+	// released if their agent does not extend them in time, like running tasks.
+	HoldGroup(c context.Context, group string, pipelineID int64, taskIDs []string)
+
+	// Supersede removes the given tasks from the queue if none of them has been
+	// handed out yet, all are pending or waiting on dependencies, and none
+	// holds a group; otherwise it leaves the queue as it is. It reports whether
+	// it removed them. Their dependents in the queue see them skipped.
+	Supersede(c context.Context, ids []string) (bool, error)
 }
 
 // Config holds the configuration for the queue.

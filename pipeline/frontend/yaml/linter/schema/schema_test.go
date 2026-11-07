@@ -133,8 +133,18 @@ func TestSchema(t *testing.T) {
 			fail:     false,
 		},
 		{
+			name:     "Concurrency group without limit",
+			testFile: ".woodpecker/test-concurrency-group.yaml",
+			fail:     false,
+		},
+		{
 			name:     "Concurrency invalid",
 			testFile: ".woodpecker/test-concurrency-invalid.yaml",
+			fail:     true,
+		},
+		{
+			name:     "Concurrency invalid empty group",
+			testFile: ".woodpecker/test-concurrency-invalid-group.yaml",
 			fail:     true,
 		},
 	}

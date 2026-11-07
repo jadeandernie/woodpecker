@@ -159,3 +159,19 @@ func (p *impl) CancelWorkflows(c context.Context, workflowIDs []string) error {
 
 	return p.q.ErrorAtOnce(c, workflowIDs, queue.ErrCancel)
 }
+
+// HoldGroup makes the pipeline hold the queue's concurrency group without a
+// limit until the given workflows are done.
+func (p *impl) HoldGroup(c context.Context, group string, pipelineID int64, workflowIDs []string) {
+	p.q.HoldGroup(c, group, pipelineID, workflowIDs)
+}
+
+// SupersedeWorkflows removes the given workflows from the queue if none of them
+// has been handed to an agent yet. An empty list is a no-op.
+func (p *impl) SupersedeWorkflows(c context.Context, workflowIDs []string) (bool, error) {
+	if len(workflowIDs) == 0 {
+		return false, nil
+	}
+
+	return p.q.Supersede(c, workflowIDs)
+}
