@@ -28,6 +28,13 @@ import (
 	"go.woodpecker-ci.org/woodpecker/v3/pipeline/state"
 )
 
+// runStep executes the step and records its failure for its failure scope.
+func (r *Runtime) runStep(runnerCtx context.Context, step *backend_types.Step) error {
+	err := r.executeStep(runnerCtx, step)
+	r.scopes.record(step, err)
+	return err
+}
+
 // executeStep is the single entry point called per step from runStage.
 // It checks whether the step should be skipped, emits a "started" trace,
 // sets up drone-compat env vars, then hands off to blocking or detached execution.
@@ -81,7 +88,7 @@ func (r *Runtime) stepTimeoutError(stepCtx context.Context, step *backend_types.
 // It logs the reason for skipping before returning.
 func (r *Runtime) shouldSkipStep(step *backend_types.Step) bool {
 	logger := r.makeLogger()
-	currentErr := r.err.Get()
+	currentErr := r.stepStatus(step)
 
 	if currentErr != nil && !step.OnFailure {
 		logger.Debug().
@@ -113,7 +120,7 @@ func (r *Runtime) setStepEnv(step *backend_types.Step) error {
 		metadata.SetDroneEnviron(step.Environment)
 	}
 
-	if r.err.Get() != nil {
+	if r.stepStatus(step) != nil {
 		step.Environment["CI_PIPELINE_STATUS"] = "failure"
 	} else {
 		step.Environment["CI_PIPELINE_STATUS"] = "success"

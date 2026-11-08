@@ -49,6 +49,17 @@ type Step struct {
 	Ports          []Port            `json:"ports,omitempty"`
 	BackendOptions map[string]any    `json:"backend_options,omitempty"`
 	WorkflowLabels map[string]string `json:"workflow_labels,omitempty"`
+
+	// FailureScope confines the effect of this step's failure to the steps of
+	// the same scope and those that inherit it. A step with a scope also only
+	// sees failures of unscoped steps, of its own scope and of the scopes in
+	// FailureScopeInherits when deciding whether to run. An empty scope means
+	// the step takes part in the workflow-wide failure state. Agents that do
+	// not know the field fall back to workflow-wide failure handling.
+	FailureScope string `json:"failure_scope,omitempty"`
+	// FailureScopeInherits lists further scopes whose failures count for this
+	// step, such as the scopes of the members its own member depends on.
+	FailureScopeInherits []string `json:"failure_scope_inherits,omitempty"`
 }
 
 // StepType identifies the type of step.

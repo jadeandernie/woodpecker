@@ -61,8 +61,16 @@ func (r *Runtime) Run(runnerCtx context.Context) error {
 		return err
 	}
 
-	for _, stage := range r.spec.Stages {
-		stageChan := r.runStage(runnerCtx, stage.Steps)
+	stages := r.spec.Stages
+	for len(stages) > 0 {
+		var stageChan <-chan error
+		if segment := scopedSegment(stages); len(segment) > 0 {
+			stageChan = r.runScopedSegment(runnerCtx, segment)
+			stages = stages[len(segment):]
+		} else {
+			stageChan = r.runStage(runnerCtx, stages[0].Steps)
+			stages = stages[1:]
+		}
 		select {
 		case <-r.ctx.Done():
 			<-stageChan //nolint:errcheck
@@ -145,6 +153,16 @@ func (r *Runtime) traceWorkflowSetupError(err error) {
 	}
 }
 
+// scopedSegment returns the leading stages in which every step has a failure
+// scope. They run together as one dependency graph.
+func scopedSegment(stages []*backend_types.Stage) []*backend_types.Stage {
+	n := 0
+	for n < len(stages) && isScopedStage(stages[n]) {
+		n++
+	}
+	return stages[:n]
+}
+
 // runStage executes all steps of a stage in parallel.
 // It returns a channel that emits the combined error (if any) once all steps finish.
 func (r *Runtime) runStage(runnerCtx context.Context, steps []*backend_types.Step) <-chan error {
@@ -153,7 +171,7 @@ func (r *Runtime) runStage(runnerCtx context.Context, steps []*backend_types.Ste
 
 	for _, step := range steps {
 		g.Go(func() error {
-			return r.executeStep(runnerCtx, step)
+			return r.runStep(runnerCtx, step)
 		})
 	}
 
