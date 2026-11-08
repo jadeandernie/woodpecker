@@ -129,6 +129,8 @@ export interface PipelineWorkflow {
   children?: PipelineStep[];
   // workflows this one waits for (its depends_on)
   depends_on?: string[];
+  // the kind the workflow config declares (build, test or deploy), or unset when it declares none
+  kind?: 'build' | 'test' | 'deploy';
   // the stage (build, test, deploy, other) and the subject (knowledge, tensor, ...) of the workflow, derived on the
   // server from its name and the repo's workflow group rules
   group?: string;

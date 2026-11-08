@@ -20,6 +20,11 @@
     "skip_clone": {
       "type": "boolean"
     },
+    "kind": {
+      "description": "What the workflow does. The UI shows a symbol for each kind and pipelines can be filtered by it. Without a kind the workflow is sorted by its name. Read more: https://woodpecker-ci.org/docs/usage/workflows#kind",
+      "type": "string",
+      "enum": ["build", "test", "deploy"]
+    },
     "when": {
       "$ref": "#/definitions/workflow_when"
     },

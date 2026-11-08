@@ -144,6 +144,9 @@ func buildRepoStats(_store store.Store, repo *model.Repo, branch string, pipelin
 	workflowsOf := make(map[int64][]*model.StatsWorkflow, len(pipelines))
 	for _, wf := range workflows {
 		group, subgroup := grouper.Group(wf.Name)
+		if wf.Kind != "" {
+			group = wf.Kind
+		}
 		workflowsOf[wf.PipelineID] = append(workflowsOf[wf.PipelineID], &model.StatsWorkflow{
 			ID:         wf.ID,
 			Name:       wf.Name,

@@ -180,11 +180,15 @@ func (g *WorkflowGrouper) Group(name string) (group, subgroup string) {
 	return DefaultWorkflowGroup(name)
 }
 
-// Assign sets Group and Subgroup on each workflow.
+// Assign sets Group and Subgroup on each workflow. A workflow that declares a
+// kind is in the group of that kind, whatever its name says.
 func (g *WorkflowGrouper) Assign(workflows []*Workflow) {
 	for _, wf := range workflows {
 		if wf != nil {
 			wf.Group, wf.Subgroup = g.Group(wf.Name)
+			if wf.Kind != "" {
+				wf.Group = wf.Kind
+			}
 		}
 	}
 }

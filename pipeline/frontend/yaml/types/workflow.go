@@ -30,6 +30,9 @@ type (
 		DependsOn   constraint.DependsOn `yaml:"depends_on,omitempty"`
 		Concurrency Concurrency          `yaml:"concurrency,omitempty"`
 		SkipClone   bool                 `yaml:"skip_clone,omitempty"`
+		// Kind is what the workflow does: build, test or deploy. Empty means it
+		// is sorted by its name (see the server's workflow groups).
+		Kind string `yaml:"kind,omitempty"`
 		// Deprecated: use when.status. TODO remove in next major.
 		RunsOn []string `yaml:"runs_on,omitempty"`
 	}

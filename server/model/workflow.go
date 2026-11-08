@@ -32,6 +32,10 @@ type Workflow struct {
 	AxisID     int               `json:"-"                    xorm:"axis_id"`
 	Children   []*Step           `json:"children,omitempty"   xorm:"-"`
 
+	// Kind is the kind the workflow config declares (build, test or deploy),
+	// or empty when it declares none.
+	Kind string `json:"kind,omitempty" xorm:"NOT NULL DEFAULT '' 'kind'"`
+
 	// Group and Subgroup sort the workflow by its name and the repo's workflow
 	// group rules, e.g. "deploy" and "knowledge" for
 	// deploy-service-knowledge-store-rpc. They are derived, not stored.

@@ -283,6 +283,7 @@ func workflowsFromPipelineBuilder(pipeline *model.Pipeline, pipelineItems []*bui
 			Environ:    item.Workflow.Environ,
 			AxisID:     item.Workflow.AxisID,
 			DependsOn:  item.DependsOn.Names(),
+			Kind:       item.Kind,
 
 			ConcurrencyGroup: exclusiveGroup(item),
 		}

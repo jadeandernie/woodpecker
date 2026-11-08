@@ -28,6 +28,7 @@ type Item struct {
 	RunsOn           []string
 	ConcurrencyLimit int
 	ConcurrencyGroup string
+	Kind             string
 	Config           *backend_types.Config
 }
 

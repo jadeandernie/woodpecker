@@ -167,6 +167,9 @@ type (
 		Children []*Step           `json:"children,omitempty"`
 		// DependsOn lists the workflows this one waits for.
 		DependsOn []string `json:"depends_on,omitempty"`
+		// Kind is the kind the workflow config declares (build, test or
+		// deploy), or empty when it declares none.
+		Kind string `json:"kind,omitempty"`
 		// Group (build, test, deploy, other) and Subgroup (the subject, e.g.
 		// knowledge) sort the workflow by its name and the repo's rules.
 		Group    string `json:"group,omitempty"`
