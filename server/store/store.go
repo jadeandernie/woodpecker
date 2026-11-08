@@ -218,6 +218,30 @@ type Store interface {
 	// TrainStateSave creates or updates the merge train state of a repo.
 	TrainStateSave(*model.TrainState) error
 
+	// Test reports
+	// TestCaseList lists the test cases of a repo that match the filter.
+	TestCaseList(repoID int64, filter *model.TestCaseFilter) ([]*model.TestCase, error)
+	// TestCaseGet returns a test case of a repo.
+	TestCaseGet(repoID, id int64) (*model.TestCase, error)
+	// TestCasesByKeyHash returns the test cases of a repo with the given key hashes.
+	TestCasesByKeyHash(repoID int64, hashes []string) ([]*model.TestCase, error)
+	// TestReportSave creates the test cases without an ID, updates the others
+	// and creates the runs in one transaction, setting the TestCaseID of a run
+	// with a CaseKeyHash from its case.
+	TestReportSave(cases []*model.TestCase, runs []*model.TestRun) error
+	// TestRunList lists the test runs that match the filter, newest first.
+	TestRunList(filter *model.TestRunFilter) ([]*model.TestRun, error)
+	// TestRunStats counts the test runs that match the filter by test case.
+	TestRunStats(filter *model.TestRunFilter) ([]*model.TestCaseStats, error)
+	// TestRunPipelineIDs returns the IDs of the newest pipelines of a repo (on
+	// a branch, unless it is empty), newest first.
+	TestRunPipelineIDs(repoID int64, branch string, limit int) ([]int64, error)
+	// TestRunPrune deletes the test runs of a repo that are older than its
+	// keepPipelines newest pipelines or created before the unix time before
+	// (0 disables either), takes them off their cases' counters and deletes
+	// the cases left without runs.
+	TestRunPrune(repoID int64, keepPipelines int, before int64) error
+
 	// Store operations
 	Ping() error
 	Close() error

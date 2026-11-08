@@ -81,6 +81,8 @@ var allBeans = []any{
 	new(model.Workflow),
 	new(model.Org),
 	new(model.TrainState),
+	new(model.TestCase),
+	new(model.TestRun),
 }
 
 // TODO: make xormigrate context aware

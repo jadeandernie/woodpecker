@@ -216,6 +216,9 @@ func (s storage) deletePipeline(sess *xorm.Session, pipelineID int64) error {
 	if err := s.workflowsDelete(sess, pipelineID); err != nil {
 		return err
 	}
+	if err := s.testRunsDeletePipeline(sess, pipelineID); err != nil {
+		return err
+	}
 
 	var confIDs []int64
 	if err := sess.Table(new(model.PipelineConfig)).Select("config_id").Where("pipeline_id = ?", pipelineID).Find(&confIDs); err != nil {

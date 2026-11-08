@@ -251,7 +251,8 @@ func TestCreatePipelineDuplicateIsRetryable(t *testing.T) {
 
 func TestDeletePipeline(t *testing.T) {
 	store, closer := newTestStore(t, new(model.Pipeline), new(model.Repo), new(model.Workflow),
-		new(model.Step), new(model.LogEntry), new(model.PipelineConfig), new(model.Config))
+		new(model.Step), new(model.LogEntry), new(model.PipelineConfig), new(model.Config),
+		new(model.TestCase), new(model.TestRun))
 	defer closer()
 
 	err := wrapInsert(store.engine.Insert(

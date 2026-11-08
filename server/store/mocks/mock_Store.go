@@ -6232,6 +6232,528 @@ func (_c *MockStore_TaskList_Call) RunAndReturn(run func() ([]*model.Task, error
 	return _c
 }
 
+// TestCaseGet provides a mock function for the type MockStore
+func (_mock *MockStore) TestCaseGet(repoID int64, id int64) (*model.TestCase, error) {
+	ret := _mock.Called(repoID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TestCaseGet")
+	}
+
+	var r0 *model.TestCase
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(int64, int64) (*model.TestCase, error)); ok {
+		return returnFunc(repoID, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int64, int64) *model.TestCase); ok {
+		r0 = returnFunc(repoID, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.TestCase)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(int64, int64) error); ok {
+		r1 = returnFunc(repoID, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TestCaseGet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TestCaseGet'
+type MockStore_TestCaseGet_Call struct {
+	*mock.Call
+}
+
+// TestCaseGet is a helper method to define mock.On call
+//   - repoID int64
+//   - id int64
+func (_e *MockStore_Expecter) TestCaseGet(repoID any, id any) *MockStore_TestCaseGet_Call {
+	return &MockStore_TestCaseGet_Call{Call: _e.mock.On("TestCaseGet", repoID, id)}
+}
+
+func (_c *MockStore_TestCaseGet_Call) Run(run func(repoID int64, id int64)) *MockStore_TestCaseGet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int64
+		if args[0] != nil {
+			arg0 = args[0].(int64)
+		}
+		var arg1 int64
+		if args[1] != nil {
+			arg1 = args[1].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TestCaseGet_Call) Return(testCase *model.TestCase, err error) *MockStore_TestCaseGet_Call {
+	_c.Call.Return(testCase, err)
+	return _c
+}
+
+func (_c *MockStore_TestCaseGet_Call) RunAndReturn(run func(repoID int64, id int64) (*model.TestCase, error)) *MockStore_TestCaseGet_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TestCaseList provides a mock function for the type MockStore
+func (_mock *MockStore) TestCaseList(repoID int64, filter *model.TestCaseFilter) ([]*model.TestCase, error) {
+	ret := _mock.Called(repoID, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TestCaseList")
+	}
+
+	var r0 []*model.TestCase
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(int64, *model.TestCaseFilter) ([]*model.TestCase, error)); ok {
+		return returnFunc(repoID, filter)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int64, *model.TestCaseFilter) []*model.TestCase); ok {
+		r0 = returnFunc(repoID, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.TestCase)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(int64, *model.TestCaseFilter) error); ok {
+		r1 = returnFunc(repoID, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TestCaseList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TestCaseList'
+type MockStore_TestCaseList_Call struct {
+	*mock.Call
+}
+
+// TestCaseList is a helper method to define mock.On call
+//   - repoID int64
+//   - filter *model.TestCaseFilter
+func (_e *MockStore_Expecter) TestCaseList(repoID any, filter any) *MockStore_TestCaseList_Call {
+	return &MockStore_TestCaseList_Call{Call: _e.mock.On("TestCaseList", repoID, filter)}
+}
+
+func (_c *MockStore_TestCaseList_Call) Run(run func(repoID int64, filter *model.TestCaseFilter)) *MockStore_TestCaseList_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int64
+		if args[0] != nil {
+			arg0 = args[0].(int64)
+		}
+		var arg1 *model.TestCaseFilter
+		if args[1] != nil {
+			arg1 = args[1].(*model.TestCaseFilter)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TestCaseList_Call) Return(testCases []*model.TestCase, err error) *MockStore_TestCaseList_Call {
+	_c.Call.Return(testCases, err)
+	return _c
+}
+
+func (_c *MockStore_TestCaseList_Call) RunAndReturn(run func(repoID int64, filter *model.TestCaseFilter) ([]*model.TestCase, error)) *MockStore_TestCaseList_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TestCasesByKeyHash provides a mock function for the type MockStore
+func (_mock *MockStore) TestCasesByKeyHash(repoID int64, hashes []string) ([]*model.TestCase, error) {
+	ret := _mock.Called(repoID, hashes)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TestCasesByKeyHash")
+	}
+
+	var r0 []*model.TestCase
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(int64, []string) ([]*model.TestCase, error)); ok {
+		return returnFunc(repoID, hashes)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int64, []string) []*model.TestCase); ok {
+		r0 = returnFunc(repoID, hashes)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.TestCase)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(int64, []string) error); ok {
+		r1 = returnFunc(repoID, hashes)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TestCasesByKeyHash_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TestCasesByKeyHash'
+type MockStore_TestCasesByKeyHash_Call struct {
+	*mock.Call
+}
+
+// TestCasesByKeyHash is a helper method to define mock.On call
+//   - repoID int64
+//   - hashes []string
+func (_e *MockStore_Expecter) TestCasesByKeyHash(repoID any, hashes any) *MockStore_TestCasesByKeyHash_Call {
+	return &MockStore_TestCasesByKeyHash_Call{Call: _e.mock.On("TestCasesByKeyHash", repoID, hashes)}
+}
+
+func (_c *MockStore_TestCasesByKeyHash_Call) Run(run func(repoID int64, hashes []string)) *MockStore_TestCasesByKeyHash_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int64
+		if args[0] != nil {
+			arg0 = args[0].(int64)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TestCasesByKeyHash_Call) Return(testCases []*model.TestCase, err error) *MockStore_TestCasesByKeyHash_Call {
+	_c.Call.Return(testCases, err)
+	return _c
+}
+
+func (_c *MockStore_TestCasesByKeyHash_Call) RunAndReturn(run func(repoID int64, hashes []string) ([]*model.TestCase, error)) *MockStore_TestCasesByKeyHash_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TestReportSave provides a mock function for the type MockStore
+func (_mock *MockStore) TestReportSave(cases []*model.TestCase, runs []*model.TestRun) error {
+	ret := _mock.Called(cases, runs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TestReportSave")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func([]*model.TestCase, []*model.TestRun) error); ok {
+		r0 = returnFunc(cases, runs)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_TestReportSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TestReportSave'
+type MockStore_TestReportSave_Call struct {
+	*mock.Call
+}
+
+// TestReportSave is a helper method to define mock.On call
+//   - cases []*model.TestCase
+//   - runs []*model.TestRun
+func (_e *MockStore_Expecter) TestReportSave(cases any, runs any) *MockStore_TestReportSave_Call {
+	return &MockStore_TestReportSave_Call{Call: _e.mock.On("TestReportSave", cases, runs)}
+}
+
+func (_c *MockStore_TestReportSave_Call) Run(run func(cases []*model.TestCase, runs []*model.TestRun)) *MockStore_TestReportSave_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []*model.TestCase
+		if args[0] != nil {
+			arg0 = args[0].([]*model.TestCase)
+		}
+		var arg1 []*model.TestRun
+		if args[1] != nil {
+			arg1 = args[1].([]*model.TestRun)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TestReportSave_Call) Return(err error) *MockStore_TestReportSave_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_TestReportSave_Call) RunAndReturn(run func(cases []*model.TestCase, runs []*model.TestRun) error) *MockStore_TestReportSave_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TestRunList provides a mock function for the type MockStore
+func (_mock *MockStore) TestRunList(filter *model.TestRunFilter) ([]*model.TestRun, error) {
+	ret := _mock.Called(filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TestRunList")
+	}
+
+	var r0 []*model.TestRun
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*model.TestRunFilter) ([]*model.TestRun, error)); ok {
+		return returnFunc(filter)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*model.TestRunFilter) []*model.TestRun); ok {
+		r0 = returnFunc(filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.TestRun)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*model.TestRunFilter) error); ok {
+		r1 = returnFunc(filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TestRunList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TestRunList'
+type MockStore_TestRunList_Call struct {
+	*mock.Call
+}
+
+// TestRunList is a helper method to define mock.On call
+//   - filter *model.TestRunFilter
+func (_e *MockStore_Expecter) TestRunList(filter any) *MockStore_TestRunList_Call {
+	return &MockStore_TestRunList_Call{Call: _e.mock.On("TestRunList", filter)}
+}
+
+func (_c *MockStore_TestRunList_Call) Run(run func(filter *model.TestRunFilter)) *MockStore_TestRunList_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *model.TestRunFilter
+		if args[0] != nil {
+			arg0 = args[0].(*model.TestRunFilter)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TestRunList_Call) Return(testRuns []*model.TestRun, err error) *MockStore_TestRunList_Call {
+	_c.Call.Return(testRuns, err)
+	return _c
+}
+
+func (_c *MockStore_TestRunList_Call) RunAndReturn(run func(filter *model.TestRunFilter) ([]*model.TestRun, error)) *MockStore_TestRunList_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TestRunPipelineIDs provides a mock function for the type MockStore
+func (_mock *MockStore) TestRunPipelineIDs(repoID int64, branch string, limit int) ([]int64, error) {
+	ret := _mock.Called(repoID, branch, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TestRunPipelineIDs")
+	}
+
+	var r0 []int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(int64, string, int) ([]int64, error)); ok {
+		return returnFunc(repoID, branch, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int64, string, int) []int64); ok {
+		r0 = returnFunc(repoID, branch, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int64)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(int64, string, int) error); ok {
+		r1 = returnFunc(repoID, branch, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TestRunPipelineIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TestRunPipelineIDs'
+type MockStore_TestRunPipelineIDs_Call struct {
+	*mock.Call
+}
+
+// TestRunPipelineIDs is a helper method to define mock.On call
+//   - repoID int64
+//   - branch string
+//   - limit int
+func (_e *MockStore_Expecter) TestRunPipelineIDs(repoID any, branch any, limit any) *MockStore_TestRunPipelineIDs_Call {
+	return &MockStore_TestRunPipelineIDs_Call{Call: _e.mock.On("TestRunPipelineIDs", repoID, branch, limit)}
+}
+
+func (_c *MockStore_TestRunPipelineIDs_Call) Run(run func(repoID int64, branch string, limit int)) *MockStore_TestRunPipelineIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int64
+		if args[0] != nil {
+			arg0 = args[0].(int64)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TestRunPipelineIDs_Call) Return(int64s []int64, err error) *MockStore_TestRunPipelineIDs_Call {
+	_c.Call.Return(int64s, err)
+	return _c
+}
+
+func (_c *MockStore_TestRunPipelineIDs_Call) RunAndReturn(run func(repoID int64, branch string, limit int) ([]int64, error)) *MockStore_TestRunPipelineIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TestRunPrune provides a mock function for the type MockStore
+func (_mock *MockStore) TestRunPrune(repoID int64, keepPipelines int, before int64) error {
+	ret := _mock.Called(repoID, keepPipelines, before)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TestRunPrune")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(int64, int, int64) error); ok {
+		r0 = returnFunc(repoID, keepPipelines, before)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_TestRunPrune_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TestRunPrune'
+type MockStore_TestRunPrune_Call struct {
+	*mock.Call
+}
+
+// TestRunPrune is a helper method to define mock.On call
+//   - repoID int64
+//   - keepPipelines int
+//   - before int64
+func (_e *MockStore_Expecter) TestRunPrune(repoID any, keepPipelines any, before any) *MockStore_TestRunPrune_Call {
+	return &MockStore_TestRunPrune_Call{Call: _e.mock.On("TestRunPrune", repoID, keepPipelines, before)}
+}
+
+func (_c *MockStore_TestRunPrune_Call) Run(run func(repoID int64, keepPipelines int, before int64)) *MockStore_TestRunPrune_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int64
+		if args[0] != nil {
+			arg0 = args[0].(int64)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TestRunPrune_Call) Return(err error) *MockStore_TestRunPrune_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_TestRunPrune_Call) RunAndReturn(run func(repoID int64, keepPipelines int, before int64) error) *MockStore_TestRunPrune_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TestRunStats provides a mock function for the type MockStore
+func (_mock *MockStore) TestRunStats(filter *model.TestRunFilter) ([]*model.TestCaseStats, error) {
+	ret := _mock.Called(filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TestRunStats")
+	}
+
+	var r0 []*model.TestCaseStats
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*model.TestRunFilter) ([]*model.TestCaseStats, error)); ok {
+		return returnFunc(filter)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*model.TestRunFilter) []*model.TestCaseStats); ok {
+		r0 = returnFunc(filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.TestCaseStats)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*model.TestRunFilter) error); ok {
+		r1 = returnFunc(filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TestRunStats_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TestRunStats'
+type MockStore_TestRunStats_Call struct {
+	*mock.Call
+}
+
+// TestRunStats is a helper method to define mock.On call
+//   - filter *model.TestRunFilter
+func (_e *MockStore_Expecter) TestRunStats(filter any) *MockStore_TestRunStats_Call {
+	return &MockStore_TestRunStats_Call{Call: _e.mock.On("TestRunStats", filter)}
+}
+
+func (_c *MockStore_TestRunStats_Call) Run(run func(filter *model.TestRunFilter)) *MockStore_TestRunStats_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *model.TestRunFilter
+		if args[0] != nil {
+			arg0 = args[0].(*model.TestRunFilter)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TestRunStats_Call) Return(testCaseStatss []*model.TestCaseStats, err error) *MockStore_TestRunStats_Call {
+	_c.Call.Return(testCaseStatss, err)
+	return _c
+}
+
+func (_c *MockStore_TestRunStats_Call) RunAndReturn(run func(filter *model.TestRunFilter) ([]*model.TestCaseStats, error)) *MockStore_TestRunStats_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // TrainStateGet provides a mock function for the type MockStore
 func (_mock *MockStore) TrainStateGet(repoID int64) (*model.TrainState, error) {
 	ret := _mock.Called(repoID)
