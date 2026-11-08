@@ -17,6 +17,10 @@ export interface CancelInfo {
 export interface Pipeline {
   id: number;
 
+  // the groups of the pipeline's workflows (build, test, deploy, other), each once, in that order; set by the
+  // pipeline list API
+  kinds?: string[];
+
   // The pipeline number.
   // This number is specified within the context of the repository the pipeline belongs to and is unique within that.
   number: number;

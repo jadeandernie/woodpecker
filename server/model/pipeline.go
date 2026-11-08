@@ -78,6 +78,10 @@ type APIPipeline struct {
 	*Pipeline
 
 	IsPrerelease bool `json:"is_prerelease,omitempty"` // deprecated, use release.is_prerelease instead
+
+	// Kinds are the groups of the pipeline's workflows (build, test, deploy,
+	// other), each once, in that order. Set where the workflows are loaded.
+	Kinds []string `json:"kinds,omitempty"`
 } //	@name	Pipeline
 
 // TableName return database table name for xorm.
