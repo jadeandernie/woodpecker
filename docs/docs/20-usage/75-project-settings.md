@@ -103,12 +103,14 @@ The pipeline view and the repository insights sort the workflows of a pipeline i
 
 By default the group and subgroup come from the workflow name. The name is split on `-`, `_`, `/` and `.`, and its first part is the stage:
 
-| First part of the name                                                                           | Group    |
-| ------------------------------------------------------------------------------------------------ | -------- |
-| `build`, `module`, `service`, `svc`, `worker`, `operators`, `compile`, `lint`, `image`, `docker` | `build`  |
-| `test`, `gate`, `check`, `nightly`, `acceptance`, `e2e`, `integration`, `unit`, `verify`         | `test`   |
-| `deploy`, `publish`, `release`, `staging`, `promote`, `rollout`                                  | `deploy` |
-| anything else                                                                                    | `other`  |
+| First part of the name                                                                                                                                                                  | Group    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `build`, `module`, `service`, `svc`, `worker`, `operators`, `compile`, `lint`, `image`, `docker`                                                                                        | `build`  |
+| `test`, `tests`, `gate`, `check`, `nightly`, `acceptance`, `e2e`, `integration`, `unit`, `verify`, `smoke`, `regression`, `qa`, `bench`, `benchmark`, `perf`, `fuzz`, `conformance` | `test`   |
+| `deploy`, `publish`, `release`, `staging`, `promote`, `rollout`                                                                                                                         | `deploy` |
+| anything else                                                                                                                                                                           | `other`  |
+
+A workflow that declares a [`kind`](./25-workflows.md#kind) is in the group of that kind, whatever its name says.
 
 The subgroup is the first later part that is neither a stage word nor one of `service`, `svc`, `lib`, `module`, `rpc`, `store`, `search`, `worker`, `app`, `operators`, `etl` or `ci`, or empty if there is none. So `svc-knowledge` is `build`/`knowledge`, `test-service-tensor-worker` is `test`/`tensor`, `deploy-service-knowledge-store-rpc` is `deploy`/`knowledge`, `gate-lint` is `test` without a subgroup and `staging` is `deploy` without a subgroup.
 

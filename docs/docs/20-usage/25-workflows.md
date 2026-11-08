@@ -72,6 +72,35 @@ steps:
       - sleep 5
 ```
 
+## Kind
+
+A workflow can say what it does with `kind`: `build`, `test` or `deploy`.
+
+```yaml title=".woodpecker/test-service-knowledge.yaml"
+kind: test
+
+steps:
+  - name: test
+    image: golang
+    commands:
+      - go test ./...
+```
+
+The web UI shows a symbol for each kind:
+
+| Kind     | Symbol         |
+| -------- | -------------- |
+| `build`  | hammer, orange |
+| `test`   | flask, violet  |
+| `deploy` | rocket, teal   |
+| other    | shape, grey    |
+
+The symbols appear next to each workflow in the pipeline's workflow list and in the workflow graph (whose lanes are the kinds), in the history of the repository insights, and, for a pipeline, as the set of kinds of its workflows in the pipeline list, the branch and pull request lists and the pipeline header. Hover a symbol to see the kind and the workflow's subject.
+
+A workflow without `kind` gets one from its name: a name starting with `build-`, `module-` or `svc-` is a build, one starting with `test-`, `gate-`, `nightly-` or `smoke-` is a test, one starting with `deploy-`, `publish-` or `release-` is a deploy, and so on. The full list and how to set your own rules for other naming schemes is under [workflow groups](./75-project-settings.md#workflow-groups). Names that match nothing are of kind other. A declared `kind` always wins over the name.
+
+The pipeline list can be filtered by kind, e.g. to see only the pipelines that deploy; see [pipeline filters](./27-pipeline-filters.md).
+
 ## Status lines
 
 Each workflow will report its own status back to your forge.
