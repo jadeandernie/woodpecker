@@ -53,6 +53,9 @@ type PipelineListOptions struct {
 	Events      []string
 	RefContains string
 	Status      string
+	// Query filters by a pipeline query, like "status:failure,error kind:test
+	// -branch:main"; see the pipeline filters docs for its syntax.
+	Query string
 }
 
 // RepoStatsOptions selects the pipelines of the repo stats history.
@@ -130,6 +133,9 @@ func (opt *PipelineListOptions) QueryEncode() string {
 	}
 	if opt.Status != "" {
 		query.Add("status", opt.Status)
+	}
+	if opt.Query != "" {
+		query.Add("q", opt.Query)
 	}
 	return query.Encode()
 }

@@ -55,6 +55,23 @@ func TestPipelineList(t *testing.T) {
 			expectedIDs:    []int64{1, 2},
 		},
 		{
+			name: "query",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/api/repos/123/pipelines?branch=main&q=status%3Afailure%2Cerror+-kind%3Adeploy", r.URL.RequestURI())
+				assert.Equal(t, "status:failure,error -kind:deploy", r.URL.Query().Get("q"))
+
+				w.WriteHeader(http.StatusOK)
+				_, err := fmt.Fprint(w, `[{"id":3}]`)
+				assert.NoError(t, err)
+			},
+			opts: PipelineListOptions{
+				Branch: "main",
+				Query:  "status:failure,error -kind:deploy",
+			},
+			expectedLength: 1,
+			expectedIDs:    []int64{3},
+		},
+		{
 			name: "empty ListOptions",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
