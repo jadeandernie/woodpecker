@@ -71,6 +71,7 @@
 
     <template #tabActions>
       <div class="flex flex-wrap gap-4 md:flex-nowrap">
+        <PipelineKinds :pipeline="pipeline" label />
         <div class="flex shrink-0 items-center gap-2" :title="$t('repo.pipeline.created', { created })">
           <Icon name="since" />
           <span>{{ since }}</span>
@@ -146,6 +147,7 @@ import RenderMarkdown from '~/components/atomic/RenderMarkdown.vue';
 import DeployPipelinePopup from '~/components/layout/popups/DeployPipelinePopup.vue';
 import Scaffold from '~/components/layout/scaffold/Scaffold.vue';
 import Tab from '~/components/layout/scaffold/Tab.vue';
+import PipelineKinds from '~/components/repo/pipeline/kind/PipelineKinds.vue';
 import PipelineStatusIcon from '~/components/repo/pipeline/PipelineStatusIcon.vue';
 import useApiClient from '~/compositions/useApiClient';
 import { useAsyncAction } from '~/compositions/useAsyncAction';

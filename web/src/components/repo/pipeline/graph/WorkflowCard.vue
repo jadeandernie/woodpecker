@@ -13,6 +13,7 @@
       >
         {{ workflow.name }}
       </router-link>
+      <KindIcon :kind="workflowKind(workflow)" :subgroup="workflow.subgroup" class="relative z-10" />
       <button
         v-if="steps.length > 0"
         type="button"
@@ -67,10 +68,12 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import Icon from '~/components/atomic/Icon.vue';
+import KindIcon from '~/components/repo/pipeline/kind/KindIcon.vue';
 import PipelineStatusIcon from '~/components/repo/pipeline/PipelineStatusIcon.vue';
 import PipelineStepDuration from '~/components/repo/pipeline/PipelineStepDuration.vue';
 import { StepType } from '~/lib/api/types';
 import type { PipelineStep, PipelineWorkflow } from '~/lib/api/types';
+import { workflowKind } from '~/lib/pipeline-kind';
 
 import GraphStatusBar from './GraphStatusBar.vue';
 import { isRunning, stepGate, stepProgress, workflowAnchor, workflowGate } from './layout';

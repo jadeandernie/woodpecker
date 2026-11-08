@@ -104,6 +104,7 @@ describe('workflowLane', () => {
     expect(workflowLane({ group: 'Deploy' })).toBe('deploy');
     expect(workflowLane({})).toBe('other');
     expect(workflowLane({ group: 'lint' })).toBe('other');
+    expect(workflowLane({ group: 'build', kind: 'deploy' })).toBe('deploy');
   });
 });
 

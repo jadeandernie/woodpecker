@@ -20,6 +20,7 @@
       >
         <header class="text-wp-text-100 sticky left-3 z-10 mb-3 flex w-fit items-center gap-2">
           <PipelineStatusIcon :status="lane.status" class="h-5! w-5!" />
+          <KindIcon :kind="lane.lane" size="md" />
           <h3 class="text-sm font-bold tracking-wide uppercase">{{ laneTitles[lane.lane] }}</h3>
           <span class="text-wp-text-alt-100 text-xs">
             {{ $t('repo.pipeline.graph.done', { done: lane.done, total: lane.total }) }}
@@ -97,6 +98,7 @@ import { useI18n } from 'vue-i18n';
 
 import Icon from '~/components/atomic/Icon.vue';
 import Panel from '~/components/layout/Panel.vue';
+import KindIcon from '~/components/repo/pipeline/kind/KindIcon.vue';
 import PipelineStatusIcon from '~/components/repo/pipeline/PipelineStatusIcon.vue';
 import type { Pipeline } from '~/lib/api/types';
 

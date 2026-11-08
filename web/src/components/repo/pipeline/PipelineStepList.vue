@@ -88,11 +88,14 @@
               />
               <PipelineStatusIcon :status="workflow.state" class="h-4! w-4!" />
               <span class="truncate">{{ workflow.name }}</span>
-              <PipelineStepDuration
-                v-if="workflow.started !== workflow.finished"
-                :workflow="workflow"
-                class="pr-2px mr-1"
-              />
+              <span class="ml-auto flex shrink-0 items-center gap-2">
+                <KindIcon :kind="workflowKind(workflow)" :subgroup="workflow.subgroup" />
+                <PipelineStepDuration
+                  v-if="workflow.started !== workflow.finished"
+                  :workflow="workflow"
+                  class="pr-2px mr-1"
+                />
+              </span>
             </button>
           </div>
           <div
@@ -130,11 +133,13 @@ import { computed, nextTick, ref, toRef, useTemplateRef, watch } from 'vue';
 import Badge from '~/components/atomic/Badge.vue';
 import Icon from '~/components/atomic/Icon.vue';
 import Panel from '~/components/layout/Panel.vue';
+import KindIcon from '~/components/repo/pipeline/kind/KindIcon.vue';
 import PipelineStatusIcon from '~/components/repo/pipeline/PipelineStatusIcon.vue';
 import PipelineStepDuration from '~/components/repo/pipeline/PipelineStepDuration.vue';
 import usePipeline from '~/compositions/usePipeline';
 import { StepType } from '~/lib/api/types';
 import type { Pipeline, PipelineStep } from '~/lib/api/types';
+import { workflowKind } from '~/lib/pipeline-kind';
 
 const props = defineProps<{
   pipeline: Pipeline;

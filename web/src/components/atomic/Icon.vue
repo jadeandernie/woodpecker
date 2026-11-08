@@ -32,6 +32,10 @@
   <SvgIcon v-else-if="name === 'cron'" :path="mdiCalendarClockOutline" size="1.3rem" />
   <SvgIcon v-else-if="name === 'toolbox'" :path="mdiToolboxOutline" size="1.3rem" />
   <SvgIcon v-else-if="name === 'puzzle'" :path="mdiPuzzleOutline" size="1.3rem" />
+  <SvgIcon v-else-if="name === 'kind-build'" :path="mdiHammerWrench" size="1.3rem" />
+  <SvgIcon v-else-if="name === 'kind-test'" :path="mdiFlask" size="1.3rem" />
+  <SvgIcon v-else-if="name === 'kind-deploy'" :path="mdiRocketLaunchOutline" size="1.3rem" />
+  <SvgIcon v-else-if="name === 'kind-other'" :path="mdiShapeOutline" size="1.3rem" />
   <SvgIcon
     v-else-if="name === 'status-failure' || name === 'status-error' || name === 'status-killed'"
     type="mdi"
@@ -143,6 +147,7 @@ import {
   mdiFileCogOutline,
   mdiFileEditOutline,
   mdiFileOutline,
+  mdiFlask,
   mdiFolderOpenOutline,
   mdiFolderOutline,
   mdiFormatListBulleted,
@@ -153,6 +158,7 @@ import {
   mdiGit,
   mdiGithub,
   mdiGitlab,
+  mdiHammerWrench,
   mdiHelpCircle,
   mdiInformationSlabCircleOutline,
   mdiLockOpenOutline,
@@ -171,6 +177,8 @@ import {
   mdiRadioboxBlank,
   mdiRadioboxIndeterminateVariant,
   mdiRefresh,
+  mdiRocketLaunchOutline,
+  mdiShapeOutline,
   mdiShieldKeyOutline,
   mdiSourceBranch,
   mdiSourceCommit,
@@ -266,6 +274,10 @@ export type IconNames =
   | 'cron'
   | 'toolbox'
   | 'puzzle'
+  | 'kind-build'
+  | 'kind-test'
+  | 'kind-deploy'
+  | 'kind-other'
   | 'forge'
   | 'fullscreen'
   | 'exit-fullscreen'

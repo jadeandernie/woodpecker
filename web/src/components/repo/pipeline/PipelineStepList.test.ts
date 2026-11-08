@@ -167,4 +167,15 @@ describe('pipelineStepList', () => {
     expect(wrapper.find('button[title="workflow-1"]').exists()).toBe(true);
     expect(wrapper.find('button[title="workflow-2"]').exists()).toBe(true);
   });
+
+  it('shows the kind of each workflow, the declared one before the group', () => {
+    const build = { ...makeWorkflow(1, [makeStep(1)], 'success'), group: 'build', subgroup: 'auth' };
+    const declared = { ...makeWorkflow(2, [makeStep(2)], 'success'), group: 'build', kind: 'test' as const };
+    const ungrouped = makeWorkflow(3, [makeStep(3)], 'success');
+
+    // shallowMount stubs KindIcon and renders its props as attributes
+    const icons = mountStepList(makePipeline([build, declared, ungrouped])).findAll('kind-icon-stub');
+    expect(icons.map((icon) => icon.attributes('kind'))).toEqual(['build', 'test', 'other']);
+    expect(icons[0].attributes('subgroup')).toBe('auth');
+  });
 });

@@ -51,6 +51,7 @@
             inline
           />
         </component>
+        <PipelineKinds :pipeline="pipeline" class="relative z-10 ml-3" />
       </div>
 
       <div
@@ -105,6 +106,7 @@ import ListItem from '~/components/atomic/ListItem.vue';
 import RenderMarkdown from '~/components/atomic/RenderMarkdown.vue';
 import { pipelineStatusColors } from '~/components/repo/pipeline/pipeline-status';
 import PipelineRunningIcon from '~/components/repo/pipeline/PipelineRunningIcon.vue';
+import PipelineKinds from '~/components/repo/pipeline/kind/PipelineKinds.vue';
 import PipelineStatusIcon from '~/components/repo/pipeline/PipelineStatusIcon.vue';
 import { useDate } from '~/compositions/useDate';
 import usePipeline from '~/compositions/usePipeline';

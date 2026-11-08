@@ -14,6 +14,7 @@
         class="h-4 w-4 min-w-4 transition-transform duration-150"
         :class="{ 'rotate-90': expanded }"
       />
+      <KindIcon v-if="!child" :kind="toPipelineKind(row.group)" />
       <div class="min-w-0">
         <div class="truncate" :class="{ 'font-bold': !child }" :title="label">{{ label }}</div>
         <div class="text-wp-text-alt-100 flex flex-wrap gap-x-2 text-xs">
@@ -53,7 +54,9 @@
 
 <script lang="ts" setup>
 import Icon from '~/components/atomic/Icon.vue';
+import KindIcon from '~/components/repo/pipeline/kind/KindIcon.vue';
 import { useDate } from '~/compositions/useDate';
+import { toPipelineKind } from '~/lib/pipeline-kind';
 
 import { formatPercent, kindBgClass } from './stats';
 import type { HistoryCell, HistoryRow } from './stats';

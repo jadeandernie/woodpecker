@@ -344,6 +344,14 @@
         "approve_success": "Pipeline approved",
         "decline_success": "Pipeline declined"
       },
+      "kind": {
+        "build": "Build",
+        "test": "Test",
+        "deploy": "Deploy",
+        "other": "Other",
+        "title": "Kind: {kind}",
+        "title_subgroup": "Kind: {kind} ({subgroup})"
+      },
       "event": {
         "push": "Push",
         "tag": "Tag",

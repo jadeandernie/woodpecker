@@ -3,9 +3,12 @@
 // The group and subgroup come from the server; this module only arranges what it is given.
 
 import type { PipelineStatus, PipelineStep, PipelineWorkflow } from '~/lib/api/types';
+import { PIPELINE_KINDS, workflowKind } from '~/lib/pipeline-kind';
+import type { PipelineKind } from '~/lib/pipeline-kind';
 
-export const LANES = ['build', 'test', 'deploy', 'other'] as const;
-export type Lane = (typeof LANES)[number];
+// a lane per workflow kind
+export const LANES = PIPELINE_KINDS;
+export type Lane = PipelineKind;
 
 export interface GraphNode {
   workflow: PipelineWorkflow;
@@ -102,9 +105,9 @@ export function rollupStatus(states: PipelineStatus[]): PipelineStatus {
   return worst;
 }
 
-export function workflowLane(workflow: Pick<PipelineWorkflow, 'group'>): Lane {
-  const group = workflow.group?.toLowerCase() ?? '';
-  return (LANES as readonly string[]).includes(group) ? (group as Lane) : 'other';
+// a workflow's lane is its kind: the declared one, else its group
+export function workflowLane(workflow: Pick<PipelineWorkflow, 'kind' | 'group'>): Lane {
+  return workflowKind(workflow);
 }
 
 function byName<T extends { name: string }>(items: T[]): Map<string, T[]> {
