@@ -28,7 +28,7 @@ Each area has its own file here, written by the agent that worked on it.
 | Kind symbols in the web UI, more test name words, docs | done | 71660ea98, 2263c5268, 2db9b0a8d; not checked visually |
 | Query filters | see `filters.md` | |
 | Foundations | see `foundation.md` | runtime failure scoping may need an agent upgrade |
-| Test reports / Tests tab | see `tests.md` | phase 1 is server and UI; phase 2 is `reports:` collection on agents plus RPC |
+| Test reports / Tests tab | see `tests.md` | storage, parsers and Ingest done (019cc7458); API, web tabs and the agent `reports:` upload left |
 | Cache | see `cache.md` | |
 
 If an area's file is missing, its agent stopped before writing one: read `git log` and `git status` for that area.
