@@ -33,6 +33,13 @@ type (
 		// Kind is what the workflow does: build, test or deploy. Empty means it
 		// is sorted by its name (see the server's workflow groups).
 		Kind string `yaml:"kind,omitempty"`
+		// Foundation makes this file a foundation: shared clone, services and
+		// hooks its members run in. A foundation file has no steps of its own.
+		Foundation *Foundation `yaml:"foundation,omitempty"`
+		// UsesFoundation names the foundation this workflow is a member of. Its
+		// steps then run inside the foundation's workflow instead of a workflow
+		// of their own.
+		UsesFoundation string `yaml:"uses_foundation,omitempty"`
 		// Deprecated: use when.status. TODO remove in next major.
 		RunsOn []string `yaml:"runs_on,omitempty"`
 	}
