@@ -1957,6 +1957,74 @@ func (_c *MockStore_GetPipelineCount_Call) RunAndReturn(run func() (int64, error
 	return _c
 }
 
+// GetPipelineFacets provides a mock function for the type MockStore
+func (_mock *MockStore) GetPipelineFacets(repo *model.Repo, limit int) (*model.PipelineFacets, error) {
+	ret := _mock.Called(repo, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPipelineFacets")
+	}
+
+	var r0 *model.PipelineFacets
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*model.Repo, int) (*model.PipelineFacets, error)); ok {
+		return returnFunc(repo, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*model.Repo, int) *model.PipelineFacets); ok {
+		r0 = returnFunc(repo, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.PipelineFacets)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*model.Repo, int) error); ok {
+		r1 = returnFunc(repo, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_GetPipelineFacets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetPipelineFacets'
+type MockStore_GetPipelineFacets_Call struct {
+	*mock.Call
+}
+
+// GetPipelineFacets is a helper method to define mock.On call
+//   - repo *model.Repo
+//   - limit int
+func (_e *MockStore_Expecter) GetPipelineFacets(repo any, limit any) *MockStore_GetPipelineFacets_Call {
+	return &MockStore_GetPipelineFacets_Call{Call: _e.mock.On("GetPipelineFacets", repo, limit)}
+}
+
+func (_c *MockStore_GetPipelineFacets_Call) Run(run func(repo *model.Repo, limit int)) *MockStore_GetPipelineFacets_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *model.Repo
+		if args[0] != nil {
+			arg0 = args[0].(*model.Repo)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_GetPipelineFacets_Call) Return(pipelineFacets *model.PipelineFacets, err error) *MockStore_GetPipelineFacets_Call {
+	_c.Call.Return(pipelineFacets, err)
+	return _c
+}
+
+func (_c *MockStore_GetPipelineFacets_Call) RunAndReturn(run func(repo *model.Repo, limit int) (*model.PipelineFacets, error)) *MockStore_GetPipelineFacets_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetPipelineLastBefore provides a mock function for the type MockStore
 func (_mock *MockStore) GetPipelineLastBefore(repo *model.Repo, s string, n int64) (*model.Pipeline, error) {
 	ret := _mock.Called(repo, s, n)

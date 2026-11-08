@@ -93,6 +93,14 @@ func (s storage) GetPipelineList(repo *model.Repo, p *model.ListOptionsWithAll, 
 		if f.RefContains != "" {
 			cond = cond.And(builder.Like{"ref", f.RefContains})
 		}
+
+		if !f.Query.IsEmpty() {
+			queryCond, err := s.pipelineQueryCond(repo, f.Query)
+			if err != nil {
+				return nil, err
+			}
+			cond = cond.And(queryCond)
+		}
 	}
 
 	return pipelines, s.paginate(p).Where(cond).

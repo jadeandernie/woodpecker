@@ -59,6 +59,7 @@ func TestGetPipelines(t *testing.T) {
 
 		mockStore := store_mocks.NewMockStore(t)
 		mockStore.On("GetPipelineList", mock.Anything, mock.Anything, mock.Anything).Return(pipelines, nil)
+		mockStore.On("WorkflowListByPipelines", []int64{fakePipeline.ID}).Return([]*model.Workflow{}, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -84,6 +85,7 @@ func TestGetPipelines(t *testing.T) {
 
 		mockStore := store_mocks.NewMockStore(t)
 		mockStore.On("GetPipelineList", mock.Anything, mock.Anything, mock.Anything).Return(pipelines, nil)
+		mockStore.On("WorkflowListByPipelines", []int64{fakePipeline.ID}).Return([]*model.Workflow{}, nil)
 
 		c, _ := gin.CreateTestContext(httptest.NewRecorder())
 		c.Set("store", mockStore)
@@ -99,6 +101,7 @@ func TestGetPipelines(t *testing.T) {
 
 		mockStore := store_mocks.NewMockStore(t)
 		mockStore.On("GetPipelineList", mock.Anything, mock.Anything, mock.Anything).Return(pipelines, nil)
+		mockStore.On("WorkflowListByPipelines", []int64{fakePipeline.ID}).Return([]*model.Workflow{}, nil)
 
 		c, _ := gin.CreateTestContext(httptest.NewRecorder())
 		c.Set("store", mockStore)
@@ -113,6 +116,7 @@ func TestGetPipelines(t *testing.T) {
 		pipelines := []*model.Pipeline{fakePipeline}
 		mockStore := store_mocks.NewMockStore(t)
 		mockStore.On("GetPipelineList", mock.Anything, mock.Anything, mock.Anything).Return(pipelines, nil)
+		mockStore.On("WorkflowListByPipelines", []int64{fakePipeline.ID}).Return([]*model.Workflow{}, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -126,6 +130,102 @@ func TestGetPipelines(t *testing.T) {
 		})
 		assert.Equal(t, http.StatusOK, c.Writer.Status())
 	})
+
+	t.Run("should pass a parsed query", func(t *testing.T) {
+		mockStore := store_mocks.NewMockStore(t)
+		mockStore.On("GetPipelineList", mock.Anything, mock.Anything, mock.MatchedBy(func(f *model.PipelineFilter) bool {
+			return f.Branch == "main" && f.Query != nil && len(f.Query.Terms) == 2 &&
+				f.Query.Terms[0].Key == model.PipelineQueryStatus && f.Query.Terms[1].Key == model.PipelineQueryKind && f.Query.Terms[1].Negate
+		})).Return([]*model.Pipeline{}, nil)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("store", mockStore)
+		c.Request, _ = http.NewRequest(http.MethodGet, "/?branch=main&q=status%3Afailure%2Cerror+-kind%3Adeploy", nil)
+
+		GetPipelines(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.JSONEq(t, "[]", w.Body.String())
+	})
+
+	t.Run("should reject an invalid query with its message", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request, _ = http.NewRequest(http.MethodGet, "/?q=stauts%3Afailure", nil)
+
+		GetPipelines(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, `unknown filter key "stauts" (did you mean "status"?)`, w.Body.String())
+	})
+
+	t.Run("should reject a query the store cannot resolve", func(t *testing.T) {
+		mockStore := store_mocks.NewMockStore(t)
+		mockStore.On("GetPipelineList", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, &model.PipelineQueryError{Msg: `no pipeline has a commit starting with "fff"`})
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("store", mockStore)
+		c.Request, _ = http.NewRequest(http.MethodGet, "/?q=commit%3Afff..aaa", nil)
+
+		GetPipelines(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, `no pipeline has a commit starting with "fff"`, w.Body.String())
+	})
+
+	t.Run("should set the kinds of each pipeline", func(t *testing.T) {
+		repo := &model.Repo{ID: 1}
+		p1 := &model.Pipeline{ID: 11, Number: 2}
+		p2 := &model.Pipeline{ID: 12, Number: 1}
+		mockStore := store_mocks.NewMockStore(t)
+		mockStore.On("GetPipelineList", mock.Anything, mock.Anything, mock.Anything).Return([]*model.Pipeline{p1, p2}, nil)
+		mockStore.On("WorkflowListByPipelines", []int64{11, 12}).Return([]*model.Workflow{
+			{PipelineID: 11, Name: "deploy-service-tensor-rpc"},
+			{PipelineID: 11, Name: "test-service-tensor-rpc"},
+			{PipelineID: 11, Name: "misc", Kind: "build"},
+			{PipelineID: 11, Name: "gate-architecture"},
+		}, nil).Once()
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("store", mockStore)
+		c.Set("repo", repo)
+		c.Request, _ = http.NewRequest(http.MethodGet, "/", nil)
+
+		GetPipelines(c)
+
+		require.Equal(t, http.StatusOK, w.Code)
+		var got []struct {
+			Number int64    `json:"number"`
+			Kinds  []string `json:"kinds"`
+		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
+		require.Len(t, got, 2)
+		assert.Equal(t, []string{"build", "test", "deploy"}, got[0].Kinds)
+		assert.Nil(t, got[1].Kinds)
+	})
+}
+
+func TestGetPipelineFacets(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &model.Repo{ID: 1}
+	facets := &model.PipelineFacets{Branches: []string{"main"}, Kinds: []string{"test"}}
+	mockStore := store_mocks.NewMockStore(t)
+	mockStore.On("GetPipelineFacets", repo, pipelineFacetsLimit).Return(facets, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("store", mockStore)
+	c.Set("repo", repo)
+
+	GetPipelineFacets(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.JSONEq(t, `{"branches":["main"],"authors":null,"events":null,"kinds":["test"],"groups":null,"workflows":null}`, w.Body.String())
 }
 
 func TestDownloadStepLogs(t *testing.T) {

@@ -17,6 +17,7 @@ package model
 
 import (
 	"fmt"
+	"sort"
 
 	"go.woodpecker-ci.org/woodpecker/v3/pipeline/errors"
 	"go.woodpecker-ci.org/woodpecker/v3/pipeline/frontend/metadata"
@@ -119,6 +120,43 @@ type PipelineFilter struct {
 	Events      []WebhookEvent
 	RefContains string
 	Status      StatusValue
+	// Query further narrows the list, see ParsePipelineQuery.
+	Query *PipelineQuery
+}
+
+// WorkflowKinds returns the groups of the workflows (set by
+// AssignWorkflowGroups), each once: build, test and deploy in that order,
+// then any groups the repo's rules define, sorted, then other.
+func WorkflowKinds(workflows []*Workflow) []string {
+	seen := make(map[string]bool)
+	for _, wf := range workflows {
+		if wf != nil && wf.Group != "" {
+			seen[wf.Group] = true
+		}
+	}
+	if len(seen) == 0 {
+		return nil
+	}
+
+	kinds := make([]string, 0, len(seen))
+	for _, group := range []string{WorkflowGroupBuild, WorkflowGroupTest, WorkflowGroupDeploy} {
+		if seen[group] {
+			kinds = append(kinds, group)
+			delete(seen, group)
+		}
+	}
+	hasOther := seen[WorkflowGroupOther]
+	delete(seen, WorkflowGroupOther)
+	custom := make([]string, 0, len(seen))
+	for group := range seen {
+		custom = append(custom, group)
+	}
+	sort.Strings(custom)
+	kinds = append(kinds, custom...)
+	if hasOther {
+		kinds = append(kinds, WorkflowGroupOther)
+	}
+	return kinds
 }
 
 // IsMultiPipeline checks if step list contain more than one parent step.

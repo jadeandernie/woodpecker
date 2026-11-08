@@ -176,6 +176,8 @@ func GetRepoWorkflows(c *gin.Context) {
 //	@Param			event			query	string	false	"filter pipelines by webhook events (comma separated)"
 //	@Param			ref				query	string	false	"filter pipelines by strings contained in ref"
 //	@Param			status			query	string	false	"filter pipelines by status"
+//	@Param			q				query	string	false	"filter pipelines by a query like 'status:failure,error kind:test branch:main' (see the pipeline filters docs)"
+//	@Failure		400	{string}	string	"the query or a filter is invalid; the body says why"
 func GetPipelines(c *gin.Context) {
 	repo := session.Repo(c)
 
@@ -220,8 +222,23 @@ func GetPipelines(c *gin.Context) {
 		filter.After = afterDt.Unix()
 	}
 
-	pipelines, err := store.FromContext(c).GetPipelineList(repo, session.Pagination(c).All(), filter)
+	if q := c.Query("q"); q != "" {
+		query, err := model.ParsePipelineQuery(q, time.Now())
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+		filter.Query = query
+	}
+
+	_store := store.FromContext(c)
+	pipelines, err := _store.GetPipelineList(repo, session.Pagination(c).All(), filter)
 	if err != nil {
+		var queryErr *model.PipelineQueryError
+		if errors.As(err, &queryErr) {
+			c.String(http.StatusBadRequest, queryErr.Error())
+			return
+		}
 		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
@@ -230,7 +247,61 @@ func GetPipelines(c *gin.Context) {
 	for i, p := range pipelines {
 		pls[i] = p.ToAPIModel()
 	}
+	if err := setPipelineKinds(_store, repo, pls); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
 	c.JSON(http.StatusOK, pls)
+}
+
+// setPipelineKinds sets the kinds of the pipelines from their workflows, all
+// loaded in one query.
+func setPipelineKinds(_store store.Store, repo *model.Repo, pipelines []*model.APIPipeline) error {
+	if len(pipelines) == 0 {
+		return nil
+	}
+	ids := make([]int64, len(pipelines))
+	for i, p := range pipelines {
+		ids[i] = p.ID
+	}
+	workflows, err := _store.WorkflowListByPipelines(ids)
+	if err != nil {
+		return err
+	}
+	model.AssignWorkflowGroups(repo, workflows)
+
+	byPipeline := make(map[int64][]*model.Workflow, len(pipelines))
+	for _, wf := range workflows {
+		byPipeline[wf.PipelineID] = append(byPipeline[wf.PipelineID], wf)
+	}
+	for _, p := range pipelines {
+		p.Kinds = model.WorkflowKinds(byPipeline[p.ID])
+	}
+	return nil
+}
+
+// pipelineFacetsLimit is how many of a repo's newest pipelines GetPipelineFacets looks at.
+const pipelineFacetsLimit = 500
+
+// GetPipelineFacets
+//
+//	@Summary		List the values to filter a repository's pipelines by
+//	@Description	Lists the branches and authors (newest first), events, workflow kinds, subgroups and workflow names
+//	@Description	seen in the repository's newest 500 pipelines, for the filter pickers of the pipeline list.
+//	@Router			/repos/{repo_id}/pipelines/filters [get]
+//	@Produce		json
+//	@Success		200	{object}	PipelineFacets
+//	@Tags			Pipelines
+//	@Param			Authorization	header	string	true	"Insert your personal access token"	default(Bearer <personal access token>)
+//	@Param			repo_id			path	int		true	"the repository id"
+func GetPipelineFacets(c *gin.Context) {
+	repo := session.Repo(c)
+	facets, err := store.FromContext(c).GetPipelineFacets(repo, pipelineFacetsLimit)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, facets)
 }
 
 // DeletePipeline

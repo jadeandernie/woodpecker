@@ -78,6 +78,9 @@ type Store interface {
 	GetPipelineLastBefore(*model.Repo, string, int64) (*model.Pipeline, error)
 	// GetPipelineList gets a list of pipelines for the repository
 	GetPipelineList(*model.Repo, *model.ListOptionsWithAll, *model.PipelineFilter) ([]*model.Pipeline, error)
+	// GetPipelineFacets lists the branches, authors, events, workflow kinds,
+	// subgroups and workflow names of the repository's newest pipelines.
+	GetPipelineFacets(repo *model.Repo, limit int) (*model.PipelineFacets, error)
 	// GetRepoLatestPipelines gets the latest pipelines for the given repo IDs.
 	GetRepoLatestPipelines([]int64) ([]*model.Pipeline, error)
 	// GetActivePipelineList gets a list of the active pipelines for the repository

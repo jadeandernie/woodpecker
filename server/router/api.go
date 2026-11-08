@@ -116,6 +116,7 @@ func apiRoutes(e *gin.RouterGroup) {
 					repo.GET("/pull_requests", api.GetRepoPullRequests)
 
 					repo.GET("/pipelines", api.GetPipelines)
+					repo.GET("/pipelines/filters", api.GetPipelineFacets)
 					repo.GET("/stats", api.GetRepoStats)
 					repo.GET("/train", api.GetTrain)
 					repo.POST("/train/resume", session.MustPush, api.PostTrainResume)
